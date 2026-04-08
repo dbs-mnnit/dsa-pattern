@@ -1,860 +1,509 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, {
+  useEffect, useMemo, useState, useRef, useCallback, createContext, useContext,
+} from "react";
 import handbook from "../dsa_100_array_string_grid_handbook.json";
 
-// ============================================================
-// STORAGE: window.storage (cross-device) → in-memory fallback
-// ============================================================
-const memoryStore = {};
-const storage = {
-  async get(key) {
-    try {
-      if (window.storage) {
-        const r = await window.storage.get(key);
-        return r ? JSON.parse(r.value) : null;
-      }
-    } catch (_) {}
-    return memoryStore[key] ?? null;
+/* ═══════════════════════════════════════════════════════════════
+   STORAGE  —  window.storage → localStorage → memory
+═══════════════════════════════════════════════════════════════ */
+const mem = {};
+const store = {
+  async get(k) {
+    try { if (window.storage) { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } } catch (_) {}
+    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (_) {}
+    return mem[k] ?? null;
   },
-  async set(key, value) {
-    try { if (window.storage) await window.storage.set(key, JSON.stringify(value)); } catch (_) {}
-    memoryStore[key] = value;
+  async set(k, v) {
+    try { if (window.storage) await window.storage.set(k, JSON.stringify(v)); } catch (_) {}
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {}
+    mem[k] = v;
   },
 };
 
-// ============================================================
-// THEME TOKENS — every color in one place, swapped by mode
-// ============================================================
-const THEMES = {
-  dark: {
-    bgRoot:       "#050811",
-    bgHeader:     "rgba(5,8,17,0.9)",
-    bgSidebar:    "rgba(8,12,26,0.97)",
-    bgCard:       "rgba(255,255,255,0.03)",
-    bgCardHover:  "rgba(255,255,255,0.055)",
-    bgInput:      "rgba(255,255,255,0.04)",
-    bgTag:        "rgba(255,255,255,0.07)",
-    bgTrigger:    "rgba(251,191,36,0.07)",
-    bgSolvedCard: "rgba(52,211,153,0.07)",
-    borderSubtle: "rgba(255,255,255,0.07)",
-    borderMedium: "rgba(255,255,255,0.12)",
-    borderInput:  "rgba(255,255,255,0.09)",
-    borderFocus:  "rgba(56,189,248,0.5)",
-    borderTrigger:"rgba(251,191,36,0.2)",
-    borderSolved: "rgba(52,211,153,0.2)",
-    textPrimary:  "#f1f5f9",
-    textSecondary:"#cbd5e1",
-    textMuted:    "#94a3b8",
-    textFaint:    "#64748b",
-    textXFaint:   "#334155",
-    textStrong:   "#ffffff",
-    textTrigger:  "#fde68a",
-    gridLine:     "rgba(255,255,255,0.016)",
-    mesh1:        "rgba(56,189,248,0.07)",
-    mesh2:        "rgba(167,139,250,0.07)",
-    mesh3:        "rgba(52,211,153,0.05)",
-    shadowCard:   "0 4px 24px rgba(0,0,0,0.35)",
-    scrollbar:    "rgba(255,255,255,0.09)",
-    overlay:      "rgba(0,0,0,0.72)",
-    barTrack:     "rgba(255,255,255,0.07)",
-    statusTodo:   "#3b4a5c",
-  },
-  light: {
-    bgRoot:       "#eef2f7",
-    bgHeader:     "rgba(255,255,255,0.93)",
-    bgSidebar:    "rgba(250,252,255,0.98)",
-    bgCard:       "rgba(255,255,255,0.92)",
-    bgCardHover:  "rgba(255,255,255,1)",
-    bgInput:      "rgba(255,255,255,0.95)",
-    bgTag:        "rgba(0,0,0,0.055)",
-    bgTrigger:    "rgba(217,119,6,0.07)",
-    bgSolvedCard: "rgba(5,150,105,0.07)",
-    borderSubtle: "rgba(0,0,0,0.08)",
-    borderMedium: "rgba(0,0,0,0.13)",
-    borderInput:  "rgba(0,0,0,0.1)",
-    borderFocus:  "rgba(2,132,199,0.5)",
-    borderTrigger:"rgba(202,138,4,0.28)",
-    borderSolved: "rgba(5,150,105,0.28)",
-    textPrimary:  "#0f172a",
-    textSecondary:"#1e293b",
-    textMuted:    "#475569",
-    textFaint:    "#64748b",
-    textXFaint:   "#94a3b8",
-    textStrong:   "#000000",
-    textTrigger:  "#78350f",
-    gridLine:     "rgba(0,0,0,0.035)",
-    mesh1:        "rgba(14,165,233,0.08)",
-    mesh2:        "rgba(139,92,246,0.07)",
-    mesh3:        "rgba(16,185,129,0.06)",
-    shadowCard:   "0 2px 14px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)",
-    scrollbar:    "rgba(0,0,0,0.13)",
-    overlay:      "rgba(0,0,0,0.45)",
-    barTrack:     "rgba(0,0,0,0.07)",
-    statusTodo:   "#cbd5e1",
-  },
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS  —  cinematic dark, neon accents
+═══════════════════════════════════════════════════════════════ */
+const D = {
+  bg0:  "#03050e",
+  bg1:  "#060a18",
+  bg2:  "#0a1020",
+  bg3:  "#0f1628",
+  bg4:  "#141d32",
+  bg5:  "#1a2540",
+  glass:"rgba(255,255,255,0.04)",
+  b0:   "rgba(255,255,255,0.04)",
+  b1:   "rgba(255,255,255,0.08)",
+  b2:   "rgba(255,255,255,0.14)",
+  b3:   "rgba(255,255,255,0.22)",
+  t0:   "#f4f8ff",
+  t1:   "#d8e4f8",
+  t2:   "#8fa8cc",
+  t3:   "#4a6080",
+  t4:   "#263348",
+  cyan:   "#00d4ff",
+  green:  "#00e5a0",
+  amber:  "#ffb800",
+  violet: "#b794f4",
+  pink:   "#ff6eb4",
+  red:    "#ff4d6d",
+  blue:   "#4d9fff",
+  lime:   "#7fff00",
+  teal:   "#00ffd5",
+  orange: "#ff8c42",
+  indigo: "#7b6cf6",
+  rose:   "#ff5e78",
 };
 
-// Accent palette — slightly richer in light mode for contrast on white
-const ACCENTS = {
-  dark: {
-    blue:"#38bdf8", violet:"#a78bfa", green:"#34d399",
-    amber:"#fbbf24", pink:"#f472b6", orange:"#fb923c",
-    indigo:"#818cf8", lime:"#4ade80", yellow:"#facc15",
-    teal:"#2dd4bf", red:"#f87171", fuchsia:"#e879f9", slate:"#94a3b8",
-  },
-  light: {
-    blue:"#0284c7", violet:"#7c3aed", green:"#059669",
-    amber:"#d97706", pink:"#db2777", orange:"#ea580c",
-    indigo:"#4338ca", lime:"#16a34a", yellow:"#ca8a04",
-    teal:"#0d9488", red:"#dc2626", fuchsia:"#a21caf", slate:"#64748b",
-  },
-};
-
-// ============================================================
-// UTILITIES
-// ============================================================
+/* ═══════════════════════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════════════════════ */
 const inferTopic = (p) => {
-  const t = `${p.title} ${p.problem_statement} ${p.pattern_explanation} ${p.trigger_phrase}`.toLowerCase();
-  if (/grid|matrix|board|island|ocean|orange|room|gate|path|flood|pacific|atlantic|cell|submatrix|submatrices/.test(t)) return "Grid";
-  if (/string|substring|anagram|palindrome|character|word|decode|calculator|prefix/.test(t)) return "String";
+  const s = `${p.title} ${p.problem_statement} ${p.pattern_explanation} ${p.trigger_phrase}`.toLowerCase();
+  if (/grid|matrix|board|island|ocean|gate|path|flood|pacific|atlantic|cell|submatrix/.test(s)) return "Grid";
+  if (/string|substring|anagram|palindrome|character|word|decode|calculator/.test(s)) return "String";
   return "Array";
 };
 
-const inferPatternFamily = (p) => {
-  const t = `${p.title} ${p.pattern_explanation} ${p.trigger_phrase} ${p.detailed_solution}`.toLowerCase();
-  if (/sliding window|window/.test(t)) return "Sliding Window";
-  if (/prefix sum|difference array|remainder/.test(t)) return "Prefix / Difference";
-  if (/hashmap|hash set|set\b|map\b/.test(t)) return "Hashing";
-  if (/two pointers|slow-fast|pointers/.test(t)) return "Two Pointers";
-  if (/monotonic stack|stack|deque/.test(t)) return "Stack / Deque";
-  if (/heap|priority queue|top-k|top k/.test(t)) return "Heap / Priority Queue";
-  if (/binary search/.test(t)) return "Binary Search";
-  if (/greedy|interval|sweep/.test(t)) return "Greedy / Intervals";
-  if (/dfs|bfs|flood fill|multi-source bfs|connected component/.test(t)) return "DFS / BFS";
-  if (/dynamic programming|\bdp\b/.test(t)) return "Dynamic Programming";
-  if (/backtracking/.test(t)) return "Backtracking";
-  if (/simulation/.test(t)) return "Simulation";
-  return "Core Pattern";
+const inferFamily = (p) => {
+  const s = `${p.title} ${p.pattern_explanation} ${p.trigger_phrase} ${p.detailed_solution}`.toLowerCase();
+  if (/sliding window|window/.test(s))              return "Sliding Window";
+  if (/prefix sum|difference array|remainder/.test(s)) return "Prefix/Diff";
+  if (/hashmap|hash set|\bset\b|\bmap\b/.test(s))   return "Hashing";
+  if (/two pointers|slow-fast/.test(s))             return "Two Pointers";
+  if (/monotonic stack|stack|deque/.test(s))        return "Stack/Deque";
+  if (/heap|priority queue|top-k/.test(s))          return "Heap/PQ";
+  if (/binary search/.test(s))                      return "Binary Search";
+  if (/greedy|interval|sweep/.test(s))              return "Greedy";
+  if (/dfs|bfs|flood fill|connected component/.test(s)) return "DFS/BFS";
+  if (/dynamic programming|\bdp\b/.test(s))         return "DP";
+  if (/backtracking/.test(s))                       return "Backtracking";
+  if (/simulation/.test(s))                         return "Simulation";
+  return "Core";
 };
 
-const extractComplexity = (text) => {
-  const tm = text.match(/Time:\s*\*\*(.*?)\*\*/i);
-  const sm = text.match(/Space:\s*\*\*(.*?)\*\*/i);
-  return { time: tm ? tm[1] : "O(N)", space: sm ? sm[1] : "O(1)" };
+const extractComplexity = (t) => {
+  const tm = t.match(/Time:\s*\*\*(.*?)\*\*/i);
+  const sm = t.match(/Space:\s*\*\*(.*?)\*\*/i);
+  return { time: tm?.[1] ?? "O(n)", space: sm?.[1] ?? "O(1)" };
 };
 
-const getFamilyColor = (family, a) => ({
-  "Sliding Window":       a.amber,
-  "Prefix / Difference":  a.indigo,
-  "Hashing":              a.blue,
-  "Two Pointers":         a.pink,
-  "Stack / Deque":        a.orange,
-  "Heap / Priority Queue":a.fuchsia,
-  "Binary Search":        a.lime,
-  "Greedy / Intervals":   a.yellow,
-  "DFS / BFS":            a.teal,
-  "Dynamic Programming":  a.red,
-  "Backtracking":         a.fuchsia,
-  "Simulation":           a.slate,
-  "Core Pattern":         a.slate,
-}[family] || a.slate);
+const TOPIC_META = {
+  Array:  { color: D.cyan,   emoji: "🔢", glyph: "[ ]" },
+  String: { color: D.violet, emoji: "🔡", glyph: '" "' },
+  Grid:   { color: D.green,  emoji: "🗺",  glyph: "⊞" },
+};
 
-const getTopicMeta = (topic, a) => ({
-  Array:  { color: a.blue,   glow: `${a.blue}60`   },
-  String: { color: a.violet, glow: `${a.violet}60`  },
-  Grid:   { color: a.green,  glow: `${a.green}60`   },
-}[topic] || { color: a.blue, glow: `${a.blue}60` });
+const FAM_COL = {
+  "Sliding Window": D.amber,  "Prefix/Diff": D.indigo,
+  "Hashing":        D.cyan,   "Two Pointers": D.pink,
+  "Stack/Deque":    D.orange, "Heap/PQ":     D.violet,
+  "Binary Search":  D.lime,   "Greedy":      D.teal,
+  "DFS/BFS":        D.green,  "DP":          D.red,
+  "Backtracking":   D.rose,   "Simulation":  D.blue,
+  "Core":           D.t3,
+};
+const famCol = (f) => FAM_COL[f] ?? D.t3;
 
-// ============================================================
-// THEME CONTEXT
-// ============================================================
-const ThemeCtx = React.createContext({ mode: "dark", th: THEMES.dark, a: ACCENTS.dark });
-const useTheme = () => React.useContext(ThemeCtx);
-
-// ============================================================
-// GLOBAL STYLES
-// ============================================================
-const GlobalStyles = () => (
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL CSS
+═══════════════════════════════════════════════════════════════ */
+const G = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Outfit:wght@700;800;900&display=swap');
-    *, *::before, *::after { box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0; }
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600;700&family=Raleway:wght@300;400;500;600;700;800;900&display=swap');
 
-    @keyframes meshFloat1  { 0%,100%{transform:translate(0,0)scale(1)}   50%{transform:translate(3%,5%)scale(1.1)} }
-    @keyframes meshFloat2  { 0%,100%{transform:translate(0,0)scale(1)}   50%{transform:translate(-3%,-3%)scale(1.08)} }
-    @keyframes meshFloat3  { 0%,100%{transform:translate(0,0)scale(1)}   50%{transform:translate(4%,-4%)scale(1.05)} }
-    @keyframes fadeSlideIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-    @keyframes fadeIn      { from{opacity:0} to{opacity:1} }
-    @keyframes spin        { to{transform:rotate(360deg)} }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
 
-    ::-webkit-scrollbar       { width:4px; height:4px; }
-    ::-webkit-scrollbar-track { background:transparent; }
-    ::-webkit-scrollbar-thumb { background:var(--scrollbar,rgba(128,128,128,0.2)); border-radius:4px; }
-
-    .dsa-root { font-family:'Inter',system-ui,sans-serif; }
-    .card-lift { transition:transform 0.18s, box-shadow 0.18s; }
-    .card-lift:hover { transform:translateY(-1px); }
-    .btn-base { cursor:pointer; border:none; background:none; font-family:inherit; }
-    .btn-base:disabled { cursor:not-allowed; }
-    .btn-hover { transition:all 0.14s; cursor:pointer; }
-    .btn-hover:hover { filter:brightness(1.08); }
-    .prob-item { transition:background 0.12s, border-color 0.1s; }
-    .section-content { overflow:hidden; transition:max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s; }
-    .section-content.closed { max-height:0 !important; opacity:0; }
-    .section-content.open   { opacity:1; }
-
-    @media(max-width:768px) {
-      .dsa-sidebar {
-        position:fixed !important; left:0 !important; top:0 !important; bottom:0 !important;
-        z-index:200 !important; transform:translateX(-100%);
-        transition:transform 0.27s cubic-bezier(0.4,0,0.2,1) !important;
-      }
-      .dsa-sidebar.open { transform:translateX(0) !important; }
-      .hide-mobile { display:none !important; }
-      .show-mobile { display:flex !important; }
+    :root {
+      --f-disp: 'Outfit', system-ui, sans-serif;
+      --f-body: 'Raleway', system-ui, sans-serif;
+      --f-mono: 'Fira Code', 'Consolas', monospace;
     }
-    @media(min-width:769px) { .show-mobile { display:none !important; } }
+
+    @keyframes auroraA { 0%,100%{transform:translate(0,0)scale(1)rotate(0deg)} 33%{transform:translate(6%,8%)scale(1.14)rotate(3deg)} 66%{transform:translate(-4%,4%)scale(.92)rotate(-2deg)} }
+    @keyframes auroraB { 0%,100%{transform:translate(0,0)scale(1)rotate(0deg)} 40%{transform:translate(-8%,-6%)scale(1.1)rotate(-4deg)} 80%{transform:translate(5%,-3%)scale(.95)rotate(2deg)} }
+    @keyframes auroraC { 0%,100%{transform:translate(0,0)scale(1)} 50%{transform:translate(4%,-7%)scale(1.08)} }
+    @keyframes auroraD { 0%,100%{transform:translate(0,0)scale(1)} 50%{transform:translate(-3%,5%)scale(1.05)} }
+    @keyframes up      { from{opacity:0;transform:translateY(22px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes left    { from{opacity:0;transform:translateX(-16px)} to{opacity:1;transform:translateX(0)} }
+    @keyframes fadein  { from{opacity:0} to{opacity:1} }
+    @keyframes scalein { from{opacity:0;transform:scale(.88)} to{opacity:1;transform:scale(1)} }
+    @keyframes spin    { to{transform:rotate(360deg)} }
+    @keyframes float   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    @keyframes blinkDot{ 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes cardIn  { from{opacity:0;transform:translateY(18px)scale(.97)} to{opacity:1;transform:none} }
+    @keyframes barIn   { from{transform:scaleX(0);transform-origin:left} to{transform:scaleX(1)} }
+    @keyframes glow    { 0%,100%{opacity:.8} 50%{opacity:1} }
+
+    ::-webkit-scrollbar      { width:3px; height:3px; }
+    ::-webkit-scrollbar-track{ background:transparent; }
+    ::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.1); border-radius:4px; }
+    ::-webkit-scrollbar-thumb:hover{ background:rgba(255,255,255,.2); }
+
+    .root{ font-family:var(--f-body); font-size:15px; line-height:1.65; -webkit-font-smoothing:antialiased; }
+    .disp{ font-family:var(--f-disp); }
+    .mono{ font-family:var(--f-mono); }
+    .body{ font-family:var(--f-body); }
+
+    .btn{cursor:pointer;border:none;background:none;font-family:var(--f-body);transition:all .18s cubic-bezier(.4,0,.2,1);}
+    .btn:hover{filter:brightness(1.12);}
+    .btn:active{transform:scale(.96);}
+    .btn:disabled{cursor:not-allowed;opacity:.35;pointer-events:none;}
+
+    .lift{transition:transform .2s cubic-bezier(.4,0,.2,1),box-shadow .2s,border-color .2s;}
+    .lift:hover{transform:translateY(-3px);}
+
+    .prob-row{transition:background .13s,border-color .12s,transform .13s;cursor:pointer;width:100%;}
+    .prob-row:hover{transform:translateX(3px);}
+    .prob-row.on{transform:none !important;}
+
+    .body-collapse{overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1),opacity .28s;}
+    .body-collapse.open{opacity:1;}
+    .body-collapse.closed{max-height:0 !important;opacity:0;}
+
+    input,textarea,select{font-family:var(--f-body);outline:none;color-scheme:dark;}
+    input::placeholder,textarea::placeholder{opacity:.4;}
+
+    .a0{animation:cardIn .38s cubic-bezier(.4,0,.2,1) .00s both;}
+    .a1{animation:cardIn .38s cubic-bezier(.4,0,.2,1) .06s both;}
+    .a2{animation:cardIn .38s cubic-bezier(.4,0,.2,1) .12s both;}
+    .a3{animation:cardIn .38s cubic-bezier(.4,0,.2,1) .18s both;}
+    .a4{animation:cardIn .38s cubic-bezier(.4,0,.2,1) .24s both;}
+    .a5{animation:cardIn .38s cubic-bezier(.4,0,.2,1) .30s both;}
+
+    @media(max-width:820px){
+      .sidebar{position:fixed !important;left:0 !important;top:0 !important;bottom:0 !important;
+        z-index:400 !important;transform:translateX(-100%);
+        transition:transform .28s cubic-bezier(.4,0,.2,1) !important;}
+      .sidebar.open{transform:translateX(0) !important;}
+      .hide-sm{display:none !important;}
+      .show-sm{display:flex !important;}
+    }
+    @media(min-width:821px){.show-sm{display:none !important;}}
   `}</style>
 );
 
-// ============================================================
-// BACKGROUND MESH
-// ============================================================
-const BackgroundMesh = () => {
-  const { th } = useTheme();
-  return (
-    <div style={{ position:"fixed", inset:0, zIndex:0, pointerEvents:"none", overflow:"hidden" }}>
-      <div style={{ position:"absolute", top:"-20%", left:"-10%", width:"55%", height:"55%",
-        background:`radial-gradient(circle, ${th.mesh1} 0%, transparent 70%)`, animation:"meshFloat1 12s ease-in-out infinite" }} />
-      <div style={{ position:"absolute", bottom:"-15%", right:"-10%", width:"50%", height:"50%",
-        background:`radial-gradient(circle, ${th.mesh2} 0%, transparent 70%)`, animation:"meshFloat2 15s ease-in-out infinite" }} />
-      <div style={{ position:"absolute", top:"40%", right:"20%", width:"30%", height:"30%",
-        background:`radial-gradient(circle, ${th.mesh3} 0%, transparent 70%)`, animation:"meshFloat3 18s ease-in-out infinite" }} />
-      <div style={{ position:"absolute", inset:0,
-        backgroundImage:`linear-gradient(${th.gridLine} 1px,transparent 1px),linear-gradient(90deg,${th.gridLine} 1px,transparent 1px)`,
-        backgroundSize:"48px 48px" }} />
-    </div>
-  );
-};
+/* ═══════════════════════════════════════════════════════════════
+   AURORA BACKGROUND
+═══════════════════════════════════════════════════════════════ */
+const Aurora = () => (
+  <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",overflow:"hidden"}}>
+    {[
+      {c:"rgba(0,212,255,.08)",  w:"70%",h:"70%",top:"-30%",left:"-20%",     an:"auroraA 20s ease-in-out infinite"},
+      {c:"rgba(183,148,244,.07)",w:"65%",h:"65%",bottom:"-25%",right:"-20%", an:"auroraB 26s ease-in-out infinite"},
+      {c:"rgba(0,229,160,.05)",  w:"50%",h:"50%",top:"30%",right:"-10%",     an:"auroraC 19s ease-in-out infinite"},
+      {c:"rgba(255,184,0,.04)",  w:"42%",h:"42%",bottom:"10%",left:"10%",    an:"auroraD 28s ease-in-out infinite reverse"},
+    ].map((b,i)=>(
+      <div key={i} style={{position:"absolute",borderRadius:"50%",filter:"blur(90px)",
+        background:`radial-gradient(circle,${b.c} 0%,transparent 70%)`,
+        width:b.w,height:b.h,top:b.top,bottom:b.bottom,left:b.left,right:b.right,animation:b.an}}/>
+    ))}
+    <div style={{position:"absolute",inset:0,
+      backgroundImage:`linear-gradient(rgba(255,255,255,.021) 1px,transparent 1px),
+                       linear-gradient(90deg,rgba(255,255,255,.021) 1px,transparent 1px)`,
+      backgroundSize:"50px 50px"}}/>
+    <div style={{position:"absolute",inset:0,
+      background:"radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,rgba(3,5,14,.65) 100%)"}}/>
+  </div>
+);
 
-// ============================================================
-// CONFETTI
-// ============================================================
-const Confetti = ({ active, onDone }) => {
-  const canvasRef = useRef(null);
-  useEffect(() => {
-    if (!active) return;
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-    const particles = Array.from({ length: 90 }, () => ({
-      x: Math.random() * canvas.width, y: Math.random() * canvas.height * 0.5,
-      r: Math.random() * 6 + 3,
-      color: ["#38bdf8","#34d399","#a78bfa","#fbbf24","#f472b6","#fb923c"][Math.floor(Math.random()*6)],
-      tiltAngle: 0, tiltInc: Math.random() * 0.07 + 0.05, tilt: 0, vy: Math.random() * 3 + 2,
+/* ═══════════════════════════════════════════════════════════════
+   CONFETTI
+═══════════════════════════════════════════════════════════════ */
+const Confetti = ({active, onDone}) => {
+  const ref = useRef(null);
+  useEffect(()=>{
+    if(!active) return;
+    const cv=ref.current; if(!cv) return;
+    const ctx=cv.getContext("2d");
+    cv.width=window.innerWidth; cv.height=window.innerHeight;
+    const cols=[D.cyan,D.green,D.violet,D.amber,D.pink,D.teal,"#fff",D.orange];
+    const pts=Array.from({length:150},()=>({
+      x:Math.random()*cv.width, y:Math.random()*cv.height*.35-20,
+      r:Math.random()*7+3, c:cols[~~(Math.random()*cols.length)],
+      vy:Math.random()*5+3, vx:(Math.random()-.5)*3,
+      rot:Math.random()*Math.PI*2, rv:(Math.random()-.5)*.15,
+      sq:Math.random()>.5,
     }));
-    let frame, elapsed = 0;
-    const run = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        p.tiltAngle += p.tiltInc; p.y += p.vy; p.tilt = Math.sin(p.tiltAngle) * 15;
-        ctx.beginPath(); ctx.lineWidth = p.r; ctx.strokeStyle = p.color;
-        ctx.moveTo(p.x + p.tilt + p.r/2, p.y); ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r/2);
-        ctx.stroke();
+    let f=0,id;
+    const draw=()=>{
+      ctx.clearRect(0,0,cv.width,cv.height);
+      pts.forEach(p=>{
+        p.y+=p.vy; p.x+=p.vx; p.rot+=p.rv;
+        ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+        ctx.globalAlpha=Math.max(0,1-f/130); ctx.fillStyle=p.c;
+        if(p.sq) ctx.fillRect(-p.r/2,-p.r/4,p.r*2,p.r*.7);
+        else { ctx.beginPath(); ctx.arc(0,0,p.r/2,0,Math.PI*2); ctx.fill(); }
+        ctx.restore();
       });
-      if (++elapsed < 110) frame = requestAnimationFrame(run);
-      else { ctx.clearRect(0,0,canvas.width,canvas.height); onDone?.(); }
+      if(++f<150) id=requestAnimationFrame(draw);
+      else { ctx.clearRect(0,0,cv.width,cv.height); onDone?.(); }
     };
-    frame = requestAnimationFrame(run);
-    return () => cancelAnimationFrame(frame);
-  }, [active]);
-  return <canvas ref={canvasRef} style={{ position:"fixed", inset:0, zIndex:999, pointerEvents:"none" }} />;
+    id=requestAnimationFrame(draw);
+    return ()=>cancelAnimationFrame(id);
+  },[active]);
+  return <canvas ref={ref} style={{position:"fixed",inset:0,zIndex:9999,pointerEvents:"none"}}/>;
 };
 
-// ============================================================
-// ATOMS
-// ============================================================
-const RichText = ({ text }) => {
-  const { th } = useTheme();
-  if (!text) return null;
-  const parts = text.split(/(\*\*.*?\*\*)/g);
+/* ═══════════════════════════════════════════════════════════════
+   ATOMS
+═══════════════════════════════════════════════════════════════ */
+const Md = ({text,size=15,lh=1.85,color=D.t2}) => {
+  if(!text) return null;
   return (
-    <p style={{ fontSize:15, lineHeight:1.78, color:th.textSecondary, margin:0 }}>
-      {parts.map((p, i) =>
-        p.startsWith("**") && p.endsWith("**")
-          ? <strong key={i} style={{ color:th.textPrimary, fontWeight:700 }}>{p.slice(2,-2)}</strong>
+    <p style={{fontSize:size,lineHeight:lh,color,margin:0,fontFamily:"var(--f-body)",fontWeight:400}}>
+      {text.split(/(\*\*[^*]+\*\*)/g).map((p,i)=>
+        p.startsWith("**")&&p.endsWith("**")
+          ? <strong key={i} style={{color:D.t0,fontWeight:700}}>{p.slice(2,-2)}</strong>
           : p
       )}
     </p>
   );
 };
 
-const Pill = ({ children, color }) => (
-  <span style={{ display:"inline-flex", alignItems:"center", padding:"2px 10px", borderRadius:999,
-    fontSize:11, fontWeight:700, letterSpacing:"0.04em",
-    border:`1px solid ${color}38`, background:`${color}1a`, color }}>
-    {children}
+const StatusBubble = ({status}) => {
+  const m={
+    solved:   {label:"Solved",   c:D.green, bg:"rgba(0,229,160,.12)"},
+    attempted:{label:"Attempted",c:D.amber, bg:"rgba(255,184,0,.12)"},
+    todo:     {label:"To Do",    c:D.t3,    bg:"rgba(255,255,255,.05)"},
+  };
+  const {label,c,bg}=m[status]||m.todo;
+  return (
+    <span style={{display:"inline-flex",alignItems:"center",gap:5,padding:"4px 11px",
+      borderRadius:999,fontSize:11,fontWeight:700,fontFamily:"var(--f-body)",
+      letterSpacing:"0.07em",textTransform:"uppercase",background:bg,color:c,
+      border:`1px solid ${c}30`}}>
+      <span style={{width:5,height:5,borderRadius:"50%",background:c,
+        boxShadow:`0 0 6px ${c}`,animation:"blinkDot 2s ease-in-out infinite"}}/>
+      {label}
+    </span>
+  );
+};
+
+const Chip = ({label,color,size=11}) => (
+  <span style={{display:"inline-flex",alignItems:"center",padding:"3px 10px",borderRadius:6,
+    fontSize:size,fontWeight:600,fontFamily:"var(--f-body)",
+    background:`${color}16`,color,border:`1px solid ${color}28`,letterSpacing:"0.04em"}}>
+    {label}
   </span>
 );
 
-const StatusDot = ({ status }) => {
-  const { th } = useTheme();
-  const cfg = {
-    solved:   { c:"#34d399", g:"rgba(52,211,153,0.6)"  },
-    attempted:{ c:"#fbbf24", g:"rgba(251,191,36,0.6)"   },
-    todo:     { c:th.statusTodo, g:"transparent" },
-  };
-  const { c, g } = cfg[status] || cfg.todo;
-  return <span style={{ display:"inline-block", width:8, height:8, borderRadius:"50%", background:c, boxShadow:`0 0 8px ${g}`, flexShrink:0 }} />;
-};
+const CxTag = ({label,val,color}) => (
+  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,
+    padding:"10px 18px",borderRadius:12,
+    background:`${color}0e`,border:`1px solid ${color}25`,
+    boxShadow:`inset 0 1px 0 ${color}12`}}>
+    <span style={{fontSize:10,color:D.t3,fontWeight:700,textTransform:"uppercase",
+      letterSpacing:"0.11em",fontFamily:"var(--f-body)"}}>{label}</span>
+    <span className="mono" style={{fontSize:14,fontWeight:700,color}}>{val}</span>
+  </div>
+);
 
-const ComplexityChip = ({ label, value, color }) => {
-  const { th } = useTheme();
+const Ring = ({pct,size=120,stroke=8,color,children}) => {
+  const r=(size-stroke)/2, C=2*Math.PI*r;
   return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"8px 14px",
-      background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:12, boxShadow:th.shadowCard }}>
-      <span style={{ fontSize:10, color:th.textFaint, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:2 }}>{label}</span>
-      <span style={{ fontSize:13, fontWeight:800, fontFamily:"Space Mono", color }}>{value}</span>
-    </div>
-  );
-};
-
-const CircleProgress = ({ pct, size=110, stroke=8, color, children }) => {
-  const { th } = useTheme();
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  return (
-    <div style={{ position:"relative", width:size, height:size, flexShrink:0 }}>
-      <svg width={size} height={size} style={{ transform:"rotate(-90deg)" }}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={th.barTrack} strokeWidth={stroke} />
+    <div style={{position:"relative",width:size,height:size,flexShrink:0}}>
+      <svg width={size} height={size} style={{transform:"rotate(-90deg)"}}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth={stroke}/>
         <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-          strokeDasharray={`${(pct/100)*circ} ${circ}`} strokeLinecap="round"
-          style={{ transition:"stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)", filter:`drop-shadow(0 0 6px ${color})` }} />
+          strokeDasharray={C} strokeDashoffset={C-(pct/100)*C} strokeLinecap="round"
+          style={{transition:"stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1)",filter:`drop-shadow(0 0 10px ${color}90)`}}/>
       </svg>
-      <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{children}</div>
+      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+        {children}
+      </div>
     </div>
   );
 };
 
-const ThemeToggle = ({ mode, onToggle }) => {
-  const { th } = useTheme();
+const Bar = ({pct,color,h=4,glow=true,delay="0s"}) => (
+  <div style={{height:h,background:"rgba(255,255,255,.06)",borderRadius:999,overflow:"hidden"}}>
+    <div style={{height:"100%",width:`${pct}%`,borderRadius:999,background:color,
+      boxShadow:glow?`0 0 14px ${color}65`:"none",
+      transition:`width 1.2s cubic-bezier(.4,0,.2,1) ${delay}`}}/>
+  </div>
+);
+
+const HeatMap = ({sessions}) => {
+  const days = useMemo(()=>{
+    const out=[]; const now=new Date(); now.setHours(0,0,0,0);
+    for(let i=83;i>=0;i--){
+      const d=new Date(now); d.setDate(d.getDate()-i);
+      const k=d.toISOString().slice(0,10);
+      out.push({k,n:sessions[k]||0});
+    }
+    return out;
+  },[sessions]);
+  const max=Math.max(...days.map(d=>d.n),1);
+  const getC=(n)=>{
+    if(!n) return "rgba(255,255,255,.05)";
+    const i=n/max;
+    if(i<.33) return `${D.cyan}40`;
+    if(i<.67) return `${D.cyan}80`;
+    return D.cyan;
+  };
   return (
-    <button onClick={onToggle} className="btn-hover" title={`Switch to ${mode==="dark"?"light":"dark"} mode`}
-      style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px",
-        background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:10,
-        color:th.textMuted, fontSize:12, fontWeight:700, cursor:"pointer",
-        boxShadow:th.shadowCard, userSelect:"none" }}>
-      <span style={{ fontSize:15 }}>{mode==="dark" ? "☀️" : "🌙"}</span>
-      <span>{mode==="dark" ? "Light" : "Dark"}</span>
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(12,1fr)",gap:3}}>
+        {days.map(d=>(
+          <div key={d.k} title={`${d.k}: ${d.n} solved`}
+            style={{aspectRatio:"1",borderRadius:3,background:getC(d.n),
+              boxShadow:d.n?`0 0 8px ${D.cyan}35`:"none",
+              transition:"transform .15s,box-shadow .15s"}}
+            onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.6)";
+              e.currentTarget.style.boxShadow=`0 0 14px ${D.cyan}90`;}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";
+              e.currentTarget.style.boxShadow=d.n?`0 0 8px ${D.cyan}35`:"none";}}/>
+        ))}
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:7,
+        fontSize:11,color:D.t3,fontFamily:"var(--f-body)"}}>
+        <span>12 weeks ago</span><span>Today</span>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION ACCORDION
+═══════════════════════════════════════════════════════════════ */
+const Section = ({icon,title,color,isOpen,onToggle,children}) => (
+  <div style={{background:D.bg3,borderRadius:18,overflow:"hidden",
+    border:`1px solid ${isOpen?color+"2a":D.b1}`,
+    boxShadow:isOpen?`0 6px 36px rgba(0,0,0,.45),0 0 0 1px ${color}0e`:`0 2px 10px rgba(0,0,0,.3)`,
+    transition:"border-color .25s,box-shadow .25s"}}>
+    <button className="btn" onClick={onToggle} style={{width:"100%",display:"flex",
+      alignItems:"center",gap:14,padding:"18px 22px",textAlign:"left"}}>
+      <div style={{width:40,height:40,borderRadius:12,flexShrink:0,display:"flex",
+        alignItems:"center",justifyContent:"center",fontSize:19,
+        background:`${color}12`,border:`1px solid ${color}22`,
+        boxShadow:isOpen?`0 0 16px ${color}25`:"none",
+        transition:"box-shadow .25s"}}>
+        {icon}
+      </div>
+      <span className="disp" style={{flex:1,fontSize:16,fontWeight:700,color:D.t0,
+        letterSpacing:"-.015em"}}>{title}</span>
+      {isOpen&&<div style={{width:6,height:6,borderRadius:"50%",background:color,
+        boxShadow:`0 0 10px ${color}`,animation:"glow 1.8s ease-in-out infinite"}}/>}
+      <span style={{color:D.t3,fontSize:14,transition:"transform .25s",
+        transform:isOpen?"rotate(0)":"rotate(-90deg)"}}>▾</span>
+    </button>
+    <div className={`body-collapse ${isOpen?"open":"closed"}`} style={{maxHeight:isOpen?4000:0}}>
+      <div style={{padding:"2px 22px 24px"}}>
+        <div style={{height:1,background:`linear-gradient(90deg,${color}45,transparent)`,marginBottom:20}}/>
+        {children}
+      </div>
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   DETAIL VIEW
+═══════════════════════════════════════════════════════════════ */
+function DetailView({problem, allProblems, onNav, onStatus, onRemarks}) {
+  const [open,setOpen]=useState({problem:true,pattern:true,trigger:true,solution:false,notes:false});
+  const tMeta=TOPIC_META[problem.topic]||TOPIC_META.Array;
+  const fColor=famCol(problem.family);
+  const {time,space}=problem.complexity;
+  const idx=allProblems.findIndex(p=>p.number===problem.number);
+  const hasPrev=idx>0, hasNext=idx<allProblems.length-1;
+  const tog=(k)=>setOpen(s=>({...s,[k]:!s[k]}));
+
+  const NavBtn=({dir,label,en})=>(
+    <button className="btn" disabled={!en} onClick={()=>onNav(dir)}
+      style={{flex:1,padding:"11px 16px",borderRadius:11,fontSize:13,fontWeight:700,
+        fontFamily:"var(--f-body)",
+        background:en&&dir>0?`${D.cyan}11`:D.bg3,
+        border:`1px solid ${en&&dir>0?D.cyan+"32":D.b1}`,
+        color:en?dir>0?D.cyan:D.t1:D.t4}}>
+      {label}
     </button>
   );
-};
 
-// ============================================================
-// MAIN APP
-// ============================================================
-export default function App() {
-  const [mode, setMode] = useState(() => {
-    try { return localStorage.getItem("dsa_theme") || "dark"; } catch { return "dark"; }
-  });
-  const th = THEMES[mode];
-  const a  = ACCENTS[mode];
-
-  const toggleMode = useCallback(() => {
-    setMode(m => {
-      const next = m === "dark" ? "light" : "dark";
-      try { localStorage.setItem("dsa_theme", next); } catch {}
-      return next;
-    });
-  }, []);
-
-  const [progress,    setProgress]    = useState({});
-  const [search,      setSearch]      = useState("");
-  const [filterTopic, setFilterTopic] = useState("All");
-  const [filterStatus,setFilterStatus]= useState("All");
-  const [filterFamily,setFilterFamily]= useState("All");
-  const [selectedId,  setSelectedId]  = useState(1);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab,   setActiveTab]   = useState("detail");
-  const [confetti,    setConfetti]    = useState(false);
-  const [syncStatus,  setSyncStatus]  = useState("idle");
-  const [expanded, setExpanded] = useState({ problem:true, pattern:true, trigger:true, solution:true, remarks:true });
-  const syncTimer = useRef(null);
-
-  useEffect(() => {
-    storage.get("dsa_progress_v2").then(data => { if (data) setProgress(data); });
-  }, []);
-
-  const saveProgress = useCallback(async (next) => {
-    setSyncStatus("saving");
-    clearTimeout(syncTimer.current);
-    syncTimer.current = setTimeout(async () => {
-      await storage.set("dsa_progress_v2", next);
-      setSyncStatus("saved");
-      setTimeout(() => setSyncStatus("idle"), 2000);
-    }, 600);
-  }, []);
-
-  const updateStatus = useCallback((id, status) => {
-    const wasSolved = progress[id]?.status === "solved";
-    setProgress(prev => {
-      const next = { ...prev, [id]: { ...(prev[id] || { remarks:"" }), status } };
-      saveProgress(next); return next;
-    });
-    if (!wasSolved && status === "solved") setConfetti(true);
-  }, [progress, saveProgress]);
-
-  const updateRemarks = useCallback((id, remarks) => {
-    setProgress(prev => {
-      const next = { ...prev, [id]: { ...(prev[id] || { status:"todo" }), remarks } };
-      saveProgress(next); return next;
-    });
-  }, [saveProgress]);
-
-  const problems = useMemo(() =>
-    handbook.problems.map(p => ({
-      ...p, topic:inferTopic(p), family:inferPatternFamily(p),
-      complexity:extractComplexity(p.detailed_solution),
-      userState: progress[p.number] || { status:"todo", remarks:"" },
-    })), [progress]);
-
-  const stats = useMemo(() => {
-    const total    = problems.length;
-    const solved   = problems.filter(p => p.userState.status === "solved").length;
-    const attempted= problems.filter(p => p.userState.status === "attempted").length;
-    const byTopic  = { Array:{solved:0,total:0}, String:{solved:0,total:0}, Grid:{solved:0,total:0} };
-    const byFamily = {};
-    problems.forEach(p => {
-      byTopic[p.topic].total++;
-      if (p.userState.status === "solved") byTopic[p.topic].solved++;
-      if (!byFamily[p.family]) byFamily[p.family] = { solved:0, total:0 };
-      byFamily[p.family].total++;
-      if (p.userState.status === "solved") byFamily[p.family].solved++;
-    });
-    return { total, solved, attempted, todo:total-solved-attempted, pct:Math.round((solved/total)*100), byTopic, byFamily };
-  }, [problems]);
-
-  const ALL_FAMILIES = ["All","Sliding Window","Prefix / Difference","Hashing","Two Pointers",
-    "Stack / Deque","Heap / Priority Queue","Binary Search","Greedy / Intervals",
-    "DFS / BFS","Dynamic Programming","Backtracking","Simulation","Core Pattern"];
-
-  const filteredProblems = useMemo(() => {
-    const q = search.toLowerCase();
-    return problems.filter(p => {
-      const ms = !q || p.title.toLowerCase().includes(q) || p.trigger_phrase.toLowerCase().includes(q) || p.family.toLowerCase().includes(q);
-      const mt = filterTopic  === "All" || p.topic            === filterTopic;
-      const mv = filterStatus === "All" || p.userState.status === filterStatus;
-      const mf = filterFamily === "All" || p.family           === filterFamily;
-      return ms && mt && mv && mf;
-    });
-  }, [problems, search, filterTopic, filterStatus, filterFamily]);
-
-  const selectedProblem = problems.find(p => p.number === selectedId) || problems[0];
-
-  const navigate = useCallback((dir) => {
-    const idx  = filteredProblems.findIndex(p => p.number === selectedId);
-    const next = filteredProblems[idx + dir];
-    if (next) setSelectedId(next.number);
-  }, [filteredProblems, selectedId]);
-
-  const toggleExpanded = (k) => setExpanded(prev => ({ ...prev, [k]: !prev[k] }));
-
-  const resetFilters = () => { setSearch(""); setFilterTopic("All"); setFilterStatus("All"); setFilterFamily("All"); };
-
-  const syncColor = syncStatus === "saved" ? a.green : th.textFaint;
-
-  return (
-    <ThemeCtx.Provider value={{ mode, th, a }}>
-      <GlobalStyles />
-      <BackgroundMesh />
-      <Confetti active={confetti} onDone={() => setConfetti(false)} />
-
-      <div className="dsa-root" style={{
-        position:"fixed", inset:0, display:"flex", flexDirection:"column",
-        background:th.bgRoot, color:th.textPrimary,
-        transition:"background 0.3s, color 0.3s"
-      }}>
-
-        {/* ── HEADER ── */}
-        <header style={{
-          flexShrink:0, zIndex:50,
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          padding:"0 16px", height:58,
-          background:th.bgHeader, backdropFilter:"blur(20px)",
-          borderBottom:`1px solid ${th.borderSubtle}`,
-          boxShadow: mode==="light" ? "0 1px 0 rgba(0,0,0,0.07)" : "none",
-        }}>
-          {/* Left */}
-          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-            <button className="btn-base show-mobile" style={{ display:"none" }}
-              onClick={() => setSidebarOpen(v => !v)}>
-              <div style={{ background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:8,
-                padding:"6px 8px", display:"flex", color:th.textMuted }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
-                </svg>
-              </div>
-            </button>
-
-            <div style={{ width:34, height:34, borderRadius:10, flexShrink:0,
-              background:"linear-gradient(135deg,#38bdf8,#6366f1)",
-              display:"flex", alignItems:"center", justifyContent:"center",
-              boxShadow:"0 0 18px rgba(56,189,248,0.35)" }}>
-              <span style={{ fontSize:16, fontWeight:900, color:"#fff", fontFamily:"Outfit" }}>D</span>
-            </div>
-
-            <div>
-              <div style={{ fontFamily:"Outfit", fontWeight:900, fontSize:16, letterSpacing:"-0.03em", color:th.textPrimary }}>
-                PatternAtlas <span style={{ color:a.blue }}>DSA</span>
-              </div>
-              <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em", color:th.textFaint, textTransform:"uppercase" }}>
-                100 Problems Handbook
-              </div>
-            </div>
-          </div>
-
-          {/* Right */}
-          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            {syncStatus !== "idle" && (
-              <span style={{ fontSize:11, fontWeight:700, color:syncColor, display:"flex", alignItems:"center", gap:5 }}>
-                {syncStatus === "saving" && (
-                  <span style={{ width:10, height:10, border:`2px solid ${a.blue}`, borderTopColor:"transparent",
-                    borderRadius:"50%", animation:"spin 0.6s linear infinite", display:"inline-block" }} />
-                )}
-                {syncStatus === "saving" ? "Syncing…" : "✓ Saved"}
-              </span>
-            )}
-
-            {/* Stats bar — hide on mobile */}
-            <div className="hide-mobile" style={{ display:"flex", alignItems:"center", gap:14 }}>
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:11, color:th.textFaint }}>Progress</span>
-                  <span style={{ fontSize:13, fontWeight:800, color:a.blue, fontFamily:"Space Mono" }}>{stats.pct}%</span>
-                </div>
-                <div style={{ width:130, height:3, background:th.barTrack, borderRadius:99, overflow:"hidden" }}>
-                  <div style={{ height:"100%", width:`${stats.pct}%`,
-                    background:`linear-gradient(90deg,${a.blue},${a.violet})`,
-                    borderRadius:99, transition:"width 1s cubic-bezier(0.4,0,0.2,1)",
-                    boxShadow:`0 0 8px ${a.blue}80` }} />
-                </div>
-              </div>
-              <div style={{ display:"flex", gap:12 }}>
-                {[{v:stats.solved,l:"Solved",c:a.green},{v:stats.attempted,l:"Tried",c:a.amber},{v:stats.todo,l:"Todo",c:th.textFaint}].map(s => (
-                  <div key={s.l} style={{ textAlign:"center" }}>
-                    <div style={{ fontSize:15, fontWeight:800, color:s.c, fontFamily:"Space Mono", lineHeight:1 }}>{s.v}</div>
-                    <div style={{ fontSize:9, fontWeight:700, color:th.textXFaint, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:2 }}>{s.l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <ThemeToggle mode={mode} onToggle={toggleMode} />
-
-            <button className="btn-hover hide-mobile" onClick={() => setActiveTab(v => v==="stats"?"detail":"stats")}
-              style={{ background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:10,
-                padding:"6px 14px", color:th.textMuted, fontSize:11, fontWeight:700, cursor:"pointer",
-                boxShadow:th.shadowCard }}>
-              {activeTab === "stats" ? "← Study" : "📊 Stats"}
-            </button>
-          </div>
-        </header>
-
-        {/* ── BODY ── */}
-        <div style={{ flex:1, display:"flex", overflow:"hidden", position:"relative", zIndex:1 }}>
-
-          {/* Mobile overlay */}
-          {sidebarOpen && (
-            <div onClick={() => setSidebarOpen(false)}
-              style={{ position:"fixed", inset:0, background:th.overlay, zIndex:199,
-                display:"none" }} className="show-mobile" />
-          )}
-
-          {/* ── SIDEBAR ── */}
-          <aside className={`dsa-sidebar ${sidebarOpen ? "open" : ""}`} style={{
-            width:330, flexShrink:0, display:"flex", flexDirection:"column",
-            background:th.bgSidebar, backdropFilter:"blur(24px)",
-            borderRight:`1px solid ${th.borderSubtle}`,
-          }}>
-            {/* Filters */}
-            <div style={{ padding:"12px 12px 8px", flexShrink:0, borderBottom:`1px solid ${th.borderSubtle}` }}>
-              {/* Search */}
-              <div style={{ position:"relative", marginBottom:10 }}>
-                <svg style={{ position:"absolute", left:11, top:"50%", transform:"translateY(-50%)",
-                  color:th.textFaint, pointerEvents:"none", flexShrink:0 }}
-                  width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <input type="text" placeholder="Search problems, patterns…" value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  style={{ width:"100%", background:th.bgInput, border:`1px solid ${th.borderInput}`,
-                    borderRadius:10, padding:"8px 32px 8px 32px", fontSize:13, color:th.textPrimary,
-                    fontFamily:"inherit", transition:"border-color 0.2s",
-                    boxShadow: mode==="light" ? "0 1px 3px rgba(0,0,0,0.06)" : "none" }}
-                  onFocus={e => e.target.style.borderColor = th.borderFocus}
-                  onBlur={e  => e.target.style.borderColor = th.borderInput}
-                />
-                {search && (
-                  <button onClick={() => setSearch("")} style={{ position:"absolute", right:10, top:"50%",
-                    transform:"translateY(-50%)", background:"none", border:"none",
-                    color:th.textFaint, cursor:"pointer", fontSize:13 }}>✕</button>
-                )}
-              </div>
-
-              {/* Topic filter */}
-              <div style={{ display:"flex", gap:4, marginBottom:8 }}>
-                {["All","Array","String","Grid"].map(tp => {
-                  const col = { Array:a.blue, String:a.violet, Grid:a.green }[tp] || a.blue;
-                  const active = filterTopic === tp;
-                  return (
-                    <button key={tp} className="btn-hover" onClick={() => setFilterTopic(tp)} style={{
-                      flex:1, padding:"5px 4px", borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer",
-                      border: active ? `1px solid ${col}40` : `1px solid ${th.borderSubtle}`,
-                      background: active ? `${col}1a` : th.bgTag,
-                      color: active ? col : th.textFaint,
-                    }}>{tp}</button>
-                  );
-                })}
-              </div>
-
-              {/* Status + Family */}
-              <div style={{ display:"flex", gap:6, marginBottom:6 }}>
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-                  style={{ flex:1, background:th.bgInput, border:`1px solid ${th.borderInput}`,
-                    borderRadius:8, padding:"6px 8px", fontSize:11, color:th.textMuted,
-                    cursor:"pointer", fontFamily:"inherit" }}>
-                  {["All","todo","attempted","solved"].map((o,i) => (
-                    <option key={o} value={o}>{["All Status","To Do","Attempted","Solved"][i]}</option>
-                  ))}
-                </select>
-                <select value={filterFamily} onChange={e => setFilterFamily(e.target.value)}
-                  style={{ flex:1, background:th.bgInput, border:`1px solid ${th.borderInput}`,
-                    borderRadius:8, padding:"6px 8px", fontSize:11, color:th.textMuted,
-                    cursor:"pointer", fontFamily:"inherit" }}>
-                  {ALL_FAMILIES.map(f => (
-                    <option key={f} value={f}>{f === "All" ? "All Patterns" : f}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ fontSize:11, color:th.textXFaint, fontWeight:600 }}>
-                {filteredProblems.length} of {problems.length} problems
-                {(search || filterTopic!=="All" || filterStatus!=="All" || filterFamily!=="All") && (
-                  <button onClick={resetFilters} style={{ marginLeft:8, color:a.blue,
-                    background:"none", border:"none", cursor:"pointer", fontSize:11, fontWeight:700 }}>Reset</button>
-                )}
-              </div>
-            </div>
-
-            {/* Problem list */}
-            <div style={{ flex:1, overflowY:"auto", padding:"6px 8px 80px" }}>
-              {filteredProblems.map((p, idx) => {
-                const isSelected = selectedId === p.number;
-                const tc = { Array:a.blue, String:a.violet, Grid:a.green }[p.topic] || a.blue;
-                const fc = getFamilyColor(p.family, a);
-                return (
-                  <button key={p.number} className="prob-item btn-base" onClick={() => { setSelectedId(p.number); setSidebarOpen(false); }}
-                    style={{ width:"100%", textAlign:"left", padding:"10px 12px", borderRadius:12, marginBottom:3,
-                      background: isSelected ? `${tc}14` : "transparent",
-                      border: isSelected ? `1px solid ${tc}30` : `1px solid transparent`,
-                      position:"relative", display:"block",
-                      animation:`fadeIn 0.18s ${Math.min(idx*0.012,0.3)}s both` }}>
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
-                      <div style={{ display:"flex", alignItems:"center", gap:7 }}>
-                        <span style={{ fontSize:10, fontWeight:700, color:th.textXFaint, fontFamily:"Space Mono" }}>
-                          #{String(p.number).padStart(3,"0")}
-                        </span>
-                        <StatusDot status={p.userState.status} />
-                      </div>
-                      <span style={{ fontSize:10, fontWeight:700, color:tc, background:`${tc}18`, borderRadius:999, padding:"1px 7px" }}>
-                        {p.topic}
-                      </span>
-                    </div>
-                    <div style={{ fontSize:13, fontWeight:600, lineHeight:1.3, marginBottom:3,
-                      color: isSelected ? th.textPrimary : th.textMuted }}>
-                      {p.title}
-                    </div>
-                    <div style={{ fontSize:10, fontWeight:600, color:fc, opacity:0.85 }}>{p.family}</div>
-                    {isSelected && (
-                      <div style={{ position:"absolute", left:0, top:"18%", bottom:"18%", width:3,
-                        background:tc, borderRadius:"0 3px 3px 0", boxShadow:`0 0 10px ${tc}90` }} />
-                    )}
-                  </button>
-                );
-              })}
-              {filteredProblems.length === 0 && (
-                <div style={{ textAlign:"center", padding:"48px 16px" }}>
-                  <div style={{ fontSize:32, marginBottom:10 }}>🔍</div>
-                  <div style={{ color:th.textFaint, fontSize:14, marginBottom:8 }}>No problems found</div>
-                  <button onClick={resetFilters} style={{ color:a.blue, background:"none", border:"none", cursor:"pointer", fontSize:13, fontWeight:700 }}>
-                    Reset filters
-                  </button>
-                </div>
-              )}
-            </div>
-          </aside>
-
-          {/* ── MAIN CONTENT ── */}
-          <main style={{ flex:1, overflowY:"auto", position:"relative" }}>
-            {activeTab === "stats"
-              ? <StatsPanel stats={stats} problems={problems} />
-              : <DetailPanel
-                  problem={selectedProblem}
-                  filteredProblems={filteredProblems}
-                  expanded={expanded}
-                  toggleExpanded={toggleExpanded}
-                  updateStatus={updateStatus}
-                  updateRemarks={updateRemarks}
-                  navigate={navigate}
-                />
-            }
-          </main>
-        </div>
-
-        {/* ── MOBILE BOTTOM NAV ── */}
-        <div className="show-mobile" style={{
-          display:"none", position:"fixed", bottom:0, left:0, right:0, zIndex:100,
-          background:th.bgHeader, backdropFilter:"blur(20px)",
-          borderTop:`1px solid ${th.borderSubtle}`, padding:"8px 12px 14px", gap:8,
-        }}>
-          {[
-            { label:"☰ List",   tab:null,     act:() => setSidebarOpen(true) },
-            { label:"📖 Study", tab:"detail", act:() => { setActiveTab("detail"); setSidebarOpen(false); } },
-            { label:"📊 Stats", tab:"stats",  act:() => { setActiveTab("stats");  setSidebarOpen(false); } },
-          ].map(btn => {
-            const isActive = btn.tab && activeTab === btn.tab;
-            return (
-              <button key={btn.label} onClick={btn.act} style={{
-                flex:1, padding:"9px 4px", borderRadius:12, fontSize:12, fontWeight:700, cursor:"pointer",
-                background: isActive ? `${a.blue}18` : th.bgCard,
-                border: isActive ? `1px solid ${a.blue}35` : `1px solid ${th.borderSubtle}`,
-                color: isActive ? a.blue : th.textMuted, fontFamily:"inherit",
-              }}>{btn.label}</button>
-            );
-          })}
-        </div>
-      </div>
-    </ThemeCtx.Provider>
-  );
-}
-
-// ============================================================
-// DETAIL PANEL
-// ============================================================
-function DetailPanel({ problem, filteredProblems, expanded, toggleExpanded, updateStatus, updateRemarks, navigate }) {
-  const { mode, th, a } = useTheme();
-  const topicMeta   = getTopicMeta(problem.topic, a);
-  const familyColor = getFamilyColor(problem.family, a);
-  const idx    = filteredProblems.findIndex(p => p.number === problem.number);
-  const hasPrev = idx > 0;
-  const hasNext = idx < filteredProblems.length - 1;
-
-  const statuses = [
-    { id:"todo",      label:"To Do",     color:th.textFaint, activeBg:th.bgTag,          activeBorder:th.borderSubtle },
-    { id:"attempted", label:"Attempted", color:a.amber,      activeBg:`${a.amber}1c`,    activeBorder:`${a.amber}50` },
-    { id:"solved",    label:"Solved ✓",  color:a.green,      activeBg:`${a.green}1c`,    activeBorder:`${a.green}50` },
+  const statuses=[
+    {id:"todo",      label:"To Do",     c:D.t3,   abg:`rgba(255,255,255,.05)`, ab:D.b2},
+    {id:"attempted", label:"Attempted", c:D.amber, abg:`${D.amber}14`,         ab:`${D.amber}45`},
+    {id:"solved",    label:"Solved ✓",  c:D.green, abg:`${D.green}14`,         ab:`${D.green}45`},
   ];
 
-  const NavBtn = ({ dir, label, enabled }) => (
-    <button onClick={() => navigate(dir)} disabled={!enabled} className="btn-hover"
-      style={{ flex:1, padding:"12px", borderRadius:14, fontSize:13, fontWeight:700, cursor:enabled?"pointer":"not-allowed",
-        background: enabled&&dir>0 ? `${a.blue}14` : th.bgCard,
-        border: enabled&&dir>0 ? `1px solid ${a.blue}30` : `1px solid ${th.borderSubtle}`,
-        color: enabled ? (dir>0 ? a.blue : th.textMuted) : th.textXFaint,
-        boxShadow:th.shadowCard, fontFamily:"inherit" }}>{label}</button>
-  );
-
-  const SectionCard = ({ id, icon, title, accent, children }) => {
-    const isOpen = expanded[id];
-    const iconBgs = { problem:`${a.blue}1c`, pattern:`${a.violet}1c`, trigger:`${a.amber}1c`, solution:`${a.green}1c`, remarks:`${th.textFaint}20` };
-    return (
-      <div style={{ background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:20,
-        overflow:"hidden", boxShadow:th.shadowCard, animation:"fadeSlideIn 0.32s ease both" }}>
-        <button className="btn-base" onClick={() => toggleExpanded(id)}
-          style={{ width:"100%", display:"flex", alignItems:"center", gap:12,
-            padding:"15px 20px", textAlign:"left", cursor:"pointer" }}>
-          <div style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:iconBgs[id]||th.bgTag,
-            display:"flex", alignItems:"center", justifyContent:"center", fontSize:17 }}>{icon}</div>
-          <span style={{ flex:1, fontSize:15, fontWeight:700, color:th.textPrimary }}>{title}</span>
-          <span style={{ color:th.textFaint, fontSize:14, display:"inline-block",
-            transition:"transform 0.2s", transform:isOpen?"rotate(0)":"rotate(-90deg)" }}>▾</span>
-        </button>
-        <div className={`section-content ${isOpen?"open":"closed"}`} style={{ maxHeight:isOpen?2000:0 }}>
-          <div style={{ padding:"0 20px 20px" }}>
-            {accent && <div style={{ height:1, background:`linear-gradient(90deg,${accent}55,transparent)`, marginBottom:16 }} />}
-            {children}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div style={{ maxWidth:860, margin:"0 auto", padding:"24px 18px 130px" }}>
+    <div style={{maxWidth:820,margin:"0 auto",padding:"28px 24px 150px"}}>
       {/* Breadcrumb + nav */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:8 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, fontWeight:700,
-          textTransform:"uppercase", letterSpacing:"0.1em", color:th.textXFaint }}>
+      <div className="a0" style={{display:"flex",alignItems:"center",
+        justifyContent:"space-between",marginBottom:22,flexWrap:"wrap",gap:12}}>
+        <div style={{display:"flex",alignItems:"center",gap:7,
+          fontSize:12,fontWeight:600,color:D.t3,fontFamily:"var(--f-body)",
+          textTransform:"uppercase",letterSpacing:".08em"}}>
           <span>Handbook</span>
-          <span style={{ color:th.borderSubtle }}>/</span>
-          <span style={{ color:topicMeta.color }}>{problem.topic}</span>
-          <span style={{ color:th.borderSubtle }}>/</span>
-          <span style={{ color:familyColor, maxWidth:180, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{problem.family}</span>
+          <span style={{color:D.b2,margin:"0 2px"}}>/</span>
+          <span style={{color:tMeta.color}}>{problem.topic}</span>
+          <span style={{color:D.b2,margin:"0 2px"}}>/</span>
+          <span style={{color:fColor,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            {problem.family}
+          </span>
         </div>
-        <div style={{ display:"flex", gap:6 }}>
-          <NavBtn dir={-1} label="← Prev" enabled={hasPrev} />
-          <NavBtn dir={1}  label="Next →" enabled={hasNext} />
+        <div style={{display:"flex",gap:8}}>
+          <NavBtn dir={-1} label="← Prev" en={hasPrev}/>
+          <NavBtn dir={1}  label="Next →" en={hasNext}/>
         </div>
       </div>
 
-      {/* Hero */}
-      <div style={{
-        background: mode==="light"
-          ? `linear-gradient(135deg,${topicMeta.color}0d,rgba(99,102,241,0.04))`
-          : `linear-gradient(135deg,${topicMeta.color}0e,rgba(99,102,241,0.06))`,
-        border:`1px solid ${topicMeta.color}2c`, borderRadius:24, padding:"22px 26px", marginBottom:14,
-        boxShadow:`0 4px 32px ${topicMeta.color}14, ${th.shadowCard}`,
-        animation:"fadeSlideIn 0.3s ease both"
+      {/* HERO */}
+      <div className="a1" style={{
+        background:`linear-gradient(140deg,${tMeta.color}0d,${fColor}09,transparent)`,
+        border:`1px solid ${tMeta.color}26`,borderRadius:24,
+        padding:"28px 32px",marginBottom:14,position:"relative",overflow:"hidden",
+        boxShadow:`0 8px 56px ${tMeta.color}16, 0 0 0 1px ${D.b0}`,
       }}>
-        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
-          <div style={{ flex:1, minWidth:200 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-              <span style={{ fontFamily:"Space Mono", fontSize:12, fontWeight:700, color:topicMeta.color,
-                background:`${topicMeta.color}1c`, borderRadius:8, padding:"2px 10px" }}>
+        {/* Top accent */}
+        <div style={{position:"absolute",top:0,left:0,right:0,height:3,
+          background:`linear-gradient(90deg,${tMeta.color},${fColor})`}}/>
+        {/* Subtle bg glyph */}
+        <div style={{position:"absolute",right:-10,top:-10,
+          fontSize:120,color:`${tMeta.color}06`,pointerEvents:"none",
+          fontFamily:"var(--f-mono)",lineHeight:1,userSelect:"none"}}>
+          {tMeta.glyph}
+        </div>
+
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:20,flexWrap:"wrap"}}>
+          <div style={{flex:1,minWidth:220}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+              <span className="mono" style={{fontSize:12,fontWeight:600,color:tMeta.color,
+                background:`${tMeta.color}18`,borderRadius:8,padding:"3px 10px",
+                border:`1px solid ${tMeta.color}28`}}>
                 #{String(problem.number).padStart(3,"0")}
               </span>
-              <StatusDot status={problem.userState.status} />
-              <span style={{ fontSize:11, fontWeight:700, color:th.textFaint, textTransform:"capitalize" }}>
-                {problem.userState.status}
-              </span>
+              <StatusBubble status={problem.userState.status}/>
             </div>
-            <h2 style={{ fontFamily:"Outfit", fontSize:"clamp(22px,4vw,32px)", fontWeight:900,
-              color:th.textPrimary, letterSpacing:"-0.03em", margin:"0 0 14px", lineHeight:1.15 }}>
+            <h1 className="disp" style={{fontSize:"clamp(22px,4vw,34px)",fontWeight:900,
+              color:D.t0,letterSpacing:"-.025em",lineHeight:1.1,marginBottom:16}}>
               {problem.title}
-            </h2>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-              <Pill color={topicMeta.color}>{problem.topic}</Pill>
-              <Pill color={familyColor}>{problem.family}</Pill>
+            </h1>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              <Chip label={`${tMeta.emoji} ${problem.topic}`} color={tMeta.color} size={12}/>
+              <Chip label={problem.family} color={fColor} size={12}/>
             </div>
           </div>
-          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
-            <ComplexityChip label="Time"  value={problem.complexity.time}  color={a.blue}   />
-            <ComplexityChip label="Space" value={problem.complexity.space} color={a.violet} />
+          <div style={{display:"flex",gap:10,flexShrink:0,flexWrap:"wrap"}}>
+            <CxTag label="Time"  val={time}  color={D.cyan}/>
+            <CxTag label="Space" val={space} color={D.violet}/>
           </div>
         </div>
 
-        {/* Status toggle */}
-        <div style={{ marginTop:18, paddingTop:14, borderTop:`1px solid ${th.borderSubtle}`,
-          display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-          <span style={{ fontSize:12, color:th.textFaint, fontWeight:700, marginRight:4 }}>Mark as:</span>
-          {statuses.map(s => {
-            const active = problem.userState.status === s.id;
+        {/* Status row */}
+        <div style={{marginTop:24,paddingTop:18,borderTop:`1px solid ${D.b1}`,
+          display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,color:D.t3,fontWeight:600,
+            fontFamily:"var(--f-body)",marginRight:4}}>Mark as:</span>
+          {statuses.map(s=>{
+            const on=problem.userState.status===s.id;
             return (
-              <button key={s.id} className="btn-hover" onClick={() => updateStatus(problem.number, s.id)}
-                style={{ padding:"7px 18px", borderRadius:10, fontSize:12, fontWeight:700, cursor:"pointer",
-                  fontFamily:"inherit",
-                  background: active ? s.activeBg : th.bgCard,
-                  border: active ? `1px solid ${s.activeBorder}` : `1px solid ${th.borderSubtle}`,
-                  color: active ? s.color : th.textFaint,
-                  boxShadow: active ? `0 0 12px ${s.color}28` : "none" }}>
+              <button key={s.id} className="btn" onClick={()=>onStatus(problem.number,s.id)}
+                style={{padding:"9px 20px",borderRadius:10,fontSize:12,fontWeight:700,
+                  fontFamily:"var(--f-body)",
+                  background:on?s.abg:D.bg4,border:`1px solid ${on?s.ab:D.b1}`,
+                  color:on?s.c:D.t3,
+                  boxShadow:on?`0 0 18px ${s.c}30`:"none",
+                  transform:on?"scale(1.05)":"none"}}>
                 {s.label}
               </button>
             );
@@ -862,167 +511,327 @@ function DetailPanel({ problem, filteredProblems, expanded, toggleExpanded, upda
         </div>
       </div>
 
-      {/* Sections */}
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-        <SectionCard id="problem"  icon="🎯" title="Problem Statement" accent={a.blue}>
-          <RichText text={problem.problem_statement} />
-        </SectionCard>
-
-        <SectionCard id="pattern"  icon="💡" title="The Pattern"        accent={a.violet}>
-          <RichText text={problem.pattern_explanation} />
-        </SectionCard>
-
-        <SectionCard id="trigger"  icon="⚡" title="Pattern Trigger"    accent={a.amber}>
-          <div style={{ background:th.bgTrigger, border:`1px solid ${th.borderTrigger}`,
-            borderLeft:`3px solid ${a.amber}`, borderRadius:12, padding:"14px 18px" }}>
-            <p style={{ fontStyle:"italic", color:th.textTrigger, lineHeight:1.72, fontSize:14, margin:0 }}>
-              "{problem.trigger_phrase}"
-            </p>
+      {/* SECTIONS */}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {[
+          {id:"problem",  icon:"🎯", title:"Problem Statement",      color:D.cyan,   body:<Md text={problem.problem_statement}/>},
+          {id:"pattern",  icon:"💡", title:"The Pattern",             color:D.violet, body:<Md text={problem.pattern_explanation}/>},
+          {id:"trigger",  icon:"⚡", title:"Pattern Trigger",         color:D.amber,  body:(
+            <div style={{background:`${D.amber}09`,border:`1px solid ${D.amber}22`,
+              borderLeft:`3px solid ${D.amber}`,borderRadius:12,padding:"18px 22px"}}>
+              <p style={{fontStyle:"italic",color:D.t1,lineHeight:1.85,fontSize:16,margin:0,
+                fontFamily:"var(--f-body)"}}>"{problem.trigger_phrase}"</p>
+            </div>
+          )},
+          {id:"solution", icon:"✅", title:"Strategy & Solution",     color:D.green,  body:<Md text={problem.detailed_solution}/>},
+          {id:"notes",    icon:"📝", title:"My Notes & Mnemonics",    color:D.t3,     body:(
+            <div>
+              <textarea value={problem.userState.remarks||""}
+                onChange={e=>onRemarks(problem.number,e.target.value)}
+                placeholder="Write your notes, edge cases, mnemonics, code…"
+                style={{width:"100%",minHeight:140,padding:"16px",resize:"vertical",display:"block",
+                  background:"rgba(255,255,255,.04)",border:`1px solid ${D.b1}`,borderRadius:12,
+                  fontSize:14,color:D.t1,lineHeight:1.75,fontFamily:"var(--f-body)",
+                  transition:"border-color .2s,box-shadow .2s"}}
+                onFocus={e=>{e.target.style.borderColor=`${D.cyan}55`;
+                  e.target.style.boxShadow=`0 0 0 3px ${D.cyan}12`;}}
+                onBlur={e=>{e.target.style.borderColor=D.b1;e.target.style.boxShadow="none";}}
+              />
+              <p style={{fontSize:11,color:D.t4,marginTop:8,fontFamily:"var(--f-body)"}}>
+                Auto-saved · persisted across sessions
+              </p>
+            </div>
+          )},
+        ].map(({id,icon,title,color,body},i)=>(
+          <div key={id} className={`a${Math.min(i+1,5)}`}>
+            <Section icon={icon} title={title} color={color}
+              isOpen={!!open[id]} onToggle={()=>tog(id)}>{body}</Section>
           </div>
-        </SectionCard>
-
-        <SectionCard id="solution" icon="✅" title="Strategy & Solution" accent={a.green}>
-          <RichText text={problem.detailed_solution} />
-        </SectionCard>
-
-        <SectionCard id="remarks"  icon="📝" title="My Notes">
-          <textarea
-            value={problem.userState.remarks || ""}
-            onChange={e => updateRemarks(problem.number, e.target.value)}
-            placeholder="Add your own notes, edge cases, hints, or mnemonics here…"
-            style={{ width:"100%", minHeight:130, padding:"12px 14px",
-              background:th.bgInput, border:`1px solid ${th.borderInput}`,
-              borderRadius:12, fontSize:13, color:th.textPrimary, resize:"vertical",
-              fontFamily:"inherit", lineHeight:1.65, transition:"border-color 0.2s" }}
-            onFocus={e => e.target.style.borderColor = th.borderFocus}
-            onBlur={e  => e.target.style.borderColor = th.borderInput}
-          />
-          <div style={{ fontSize:10, color:th.textXFaint, marginTop:6, fontWeight:600 }}>
-            Auto-saved · cross-device storage
-          </div>
-        </SectionCard>
+        ))}
       </div>
 
-      {/* Bottom nav */}
-      <div style={{ display:"flex", gap:10, marginTop:28 }}>
-        <NavBtn dir={-1} label="← Previous Problem" enabled={hasPrev} />
-        <NavBtn dir={1}  label="Next Problem →"      enabled={hasNext} />
+      <div style={{display:"flex",gap:10,marginTop:22}}>
+        <NavBtn dir={-1} label="← Previous Problem" en={hasPrev}/>
+        <NavBtn dir={1}  label="Next Problem →"      en={hasNext}/>
       </div>
     </div>
   );
 }
 
-// ============================================================
-// STATS PANEL
-// ============================================================
-function StatsPanel({ stats, problems }) {
-  const { th, a } = useTheme();
-  const topicColors = { Array:a.blue, String:a.violet, Grid:a.green };
-  const solvedProblems = problems.filter(p => p.userState.status === "solved");
+/* ═══════════════════════════════════════════════════════════════
+   FLASHCARD
+═══════════════════════════════════════════════════════════════ */
+function FlashCard({problem, total, idx, onRate}) {
+  const [flipped,setFlipped]=useState(false);
+  const [exitDir,setExitDir]=useState(null);
+  const tMeta=TOPIC_META[problem.topic]||TOPIC_META.Array;
+  const fColor=famCol(problem.family);
+  const pct=Math.round(((idx+1)/total)*100);
 
-  const Card = ({ children, style={} }) => (
-    <div className="card-lift" style={{ background:th.bgCard, border:`1px solid ${th.borderSubtle}`,
-      borderRadius:18, boxShadow:th.shadowCard, ...style }}>
+  const rate=(val)=>{
+    setExitDir(val==="got"?"right":"left");
+    setTimeout(()=>{ setExitDir(null); setFlipped(false); onRate(val); },320);
+  };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",
+      justifyContent:"center",minHeight:"100%",padding:"28px 20px",gap:22}}>
+      {/* Progress */}
+      <div style={{width:"100%",maxWidth:640}}>
+        <div style={{display:"flex",justifyContent:"space-between",
+          fontSize:12,color:D.t3,marginBottom:8,fontFamily:"var(--f-body)"}}>
+          <span>Card {idx+1} / {total}</span>
+          <span style={{color:D.cyan,fontWeight:700}}>{pct}%</span>
+        </div>
+        <Bar pct={pct} color={D.cyan} h={3}/>
+      </div>
+
+      {/* Card */}
+      <div onClick={()=>!flipped&&setFlipped(true)} style={{
+        width:"100%",maxWidth:640,borderRadius:22,
+        background:D.bg3,
+        border:`1px solid ${flipped?D.green+"40":D.b2}`,
+        padding:"36px 40px",cursor:flipped?"default":"pointer",
+        boxShadow:`0 24px 80px rgba(0,0,0,.65), 0 0 0 1px ${flipped?D.green+"18":D.b0}`,
+        position:"relative",overflow:"hidden",
+        transform:exitDir==="right"?"translateX(90px) rotate(4deg)":exitDir==="left"?"translateX(-90px) rotate(-4deg)":"none",
+        opacity:exitDir?0:1,
+        transition:"border-color .3s,box-shadow .3s,transform .3s,opacity .28s",
+        animation:"scalein .32s cubic-bezier(.4,0,.2,1) both",
+      }}>
+        <div style={{position:"absolute",top:0,left:0,right:0,height:3,
+          background:`linear-gradient(90deg,${tMeta.color},${fColor})`}}/>
+
+        <div style={{display:"flex",justifyContent:"space-between",
+          alignItems:"flex-start",marginBottom:26}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <Chip label={`${tMeta.emoji} ${problem.topic}`} color={tMeta.color}/>
+            <Chip label={problem.family} color={fColor}/>
+          </div>
+          <span className="mono" style={{fontSize:12,color:D.t4}}>
+            #{String(problem.number).padStart(3,"0")}
+          </span>
+        </div>
+
+        {!flipped ? (
+          <div>
+            <h2 className="disp" style={{fontSize:28,fontWeight:900,color:D.t0,
+              letterSpacing:"-.02em",lineHeight:1.15,marginBottom:20}}>
+              {problem.title}
+            </h2>
+            <Md text={problem.problem_statement} size={15}/>
+            <div style={{marginTop:32,display:"flex",alignItems:"center",gap:8,
+              color:D.t3,fontSize:13,fontFamily:"var(--f-body)"}}>
+              <span style={{fontSize:20}}>👆</span>
+              <span>Tap to reveal the pattern</span>
+            </div>
+          </div>
+        ):(
+          <div style={{animation:"up .26s ease both"}}>
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:11,fontWeight:700,color:D.green,textTransform:"uppercase",
+                letterSpacing:".12em",marginBottom:10,fontFamily:"var(--f-body)"}}>💡 The Pattern</div>
+              <Md text={problem.pattern_explanation} size={15}/>
+            </div>
+            <div style={{background:`${D.amber}09`,border:`1px solid ${D.amber}22`,
+              borderLeft:`3px solid ${D.amber}`,borderRadius:12,padding:"16px 20px",marginTop:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:D.amber,textTransform:"uppercase",
+                letterSpacing:".12em",marginBottom:8,fontFamily:"var(--f-body)"}}>⚡ Trigger</div>
+              <p style={{fontStyle:"italic",color:D.t1,fontSize:15,lineHeight:1.8,margin:0,
+                fontFamily:"var(--f-body)"}}>"{problem.trigger_phrase}"</p>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:16,flexWrap:"wrap"}}>
+              <CxTag label="Time"  val={problem.complexity.time}  color={D.cyan}/>
+              <CxTag label="Space" val={problem.complexity.space} color={D.violet}/>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Buttons */}
+      <div style={{display:"flex",gap:10,width:"100%",maxWidth:640}}>
+        {!flipped?(
+          <button className="btn" onClick={()=>setFlipped(true)} style={{
+            flex:1,padding:"14px",borderRadius:14,fontSize:14,fontWeight:700,
+            fontFamily:"var(--f-body)",
+            background:`linear-gradient(135deg,${D.cyan}18,${D.violet}14)`,
+            border:`1px solid ${D.cyan}32`,color:D.cyan}}>
+            Reveal Pattern →
+          </button>
+        ):(
+          <>
+            {[
+              {label:"😅  Miss",    val:"miss",  c:D.red,   bg:`${D.red}14`},
+              {label:"🤔  Shaky",   val:"shaky", c:D.amber, bg:`${D.amber}14`},
+              {label:"✅  Got it!", val:"got",   c:D.green, bg:`${D.green}14`},
+            ].map(a=>(
+              <button key={a.val} className="btn" onClick={()=>rate(a.val)} style={{
+                flex:1,padding:"14px",borderRadius:14,fontSize:13,fontWeight:700,
+                fontFamily:"var(--f-body)",
+                background:a.bg,border:`1px solid ${a.c}32`,color:a.c}}>
+                {a.label}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STATS VIEW
+═══════════════════════════════════════════════════════════════ */
+function StatsView({stats, problems, sessions}) {
+  const topColors={Array:D.cyan,String:D.violet,Grid:D.green};
+  const solved=problems.filter(p=>p.userState.status==="solved");
+  const totalDays=Object.values(sessions).filter(Boolean).length;
+
+  const streak=useMemo(()=>{
+    let s=0; const now=new Date(); now.setHours(0,0,0,0);
+    for(let i=0;i<365;i++){
+      const d=new Date(now); d.setDate(d.getDate()-i);
+      if((sessions[d.toISOString().slice(0,10)]||0)>0) s++;
+      else break;
+    }
+    return s;
+  },[sessions]);
+
+  const Card=({children,glow,cls="",style={}})=>(
+    <div className={`lift ${cls}`} style={{background:D.bg3,borderRadius:20,
+      border:`1px solid ${glow?glow+"20":D.b1}`,
+      boxShadow:`0 4px 24px rgba(0,0,0,.4)${glow?`,0 0 32px ${glow}0e`:""}`,
+      position:"relative",overflow:"hidden",...style}}>
       {children}
     </div>
   );
 
   return (
-    <div style={{ maxWidth:860, margin:"0 auto", padding:"24px 18px 130px" }}>
-      <h2 style={{ fontFamily:"Outfit", fontSize:28, fontWeight:900, color:th.textPrimary,
-        marginBottom:4, letterSpacing:"-0.03em" }}>Progress Dashboard</h2>
-      <p style={{ color:th.textFaint, fontSize:14, marginBottom:24 }}>
-        Your DSA mastery across all {stats.total} problems
-      </p>
-
-      {/* 4 stat cards */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))", gap:12, marginBottom:14 }}>
-        {[
-          { label:"Solved",    val:stats.solved,    color:a.green,       icon:"✓", bar:true },
-          { label:"Attempted", val:stats.attempted, color:a.amber,       icon:"◐", bar:true },
-          { label:"Remaining", val:stats.todo,      color:th.textFaint,  icon:"○", bar:true },
-          { label:"Done",      val:`${stats.pct}%`, color:a.blue,        icon:"◎", bar:false },
-        ].map(c => (
-          <Card key={c.label} style={{ padding:"18px 14px", textAlign:"center" }}>
-            <div style={{ fontSize:20, marginBottom:6 }}>{c.icon}</div>
-            <div style={{ fontFamily:"Space Mono", fontSize:26, fontWeight:700, color:c.color, lineHeight:1 }}>{c.val}</div>
-            {c.bar && (
-              <div style={{ height:3, background:th.barTrack, borderRadius:99, margin:"10px 0 5px", overflow:"hidden" }}>
-                <div style={{ height:"100%", width:`${(Number(c.val)/stats.total)*100}%`, background:c.color, borderRadius:99, transition:"width 1s" }} />
-              </div>
-            )}
-            <div style={{ fontSize:11, color:th.textXFaint, fontWeight:700, textTransform:"uppercase",
-              letterSpacing:"0.08em", marginTop:c.bar?0:10 }}>{c.label}</div>
-          </Card>
-        ))}
+    <div style={{maxWidth:900,margin:"0 auto",padding:"28px 24px 150px"}}>
+      <div className="a0" style={{marginBottom:30}}>
+        <h2 className="disp" style={{fontSize:38,fontWeight:900,color:D.t0,
+          letterSpacing:"-.035em",marginBottom:6}}>
+          Progress Dashboard
+        </h2>
+        <p style={{fontSize:15,color:D.t3,fontFamily:"var(--f-body)"}}>
+          Your DSA mastery across all {stats.total} problems
+        </p>
       </div>
 
-      {/* Ring + motivational */}
-      <Card style={{ padding:"26px 28px", marginBottom:14, display:"flex", alignItems:"center", gap:28, flexWrap:"wrap" }}>
-        <CircleProgress pct={stats.pct} size={110} stroke={8} color={a.blue}>
-          <div style={{ textAlign:"center" }}>
-            <div style={{ fontFamily:"Space Mono", fontSize:20, fontWeight:700, color:a.blue }}>{stats.pct}%</div>
-            <div style={{ fontSize:9, color:th.textFaint, fontWeight:700 }}>DONE</div>
+      {/* Ring + counters */}
+      <div className="a1" style={{display:"grid",gridTemplateColumns:"auto 1fr",gap:14,marginBottom:14}}>
+        <Card glow={D.cyan} style={{padding:"28px 22px",display:"flex",flexDirection:"column",
+          alignItems:"center",justifyContent:"center",gap:16,minWidth:190}}>
+          <Ring pct={stats.pct} size={132} stroke={9} color={D.cyan}>
+            <div style={{textAlign:"center"}}>
+              <div className="mono" style={{fontSize:26,fontWeight:700,color:D.cyan,lineHeight:1}}>{stats.pct}%</div>
+              <div style={{fontSize:9,color:D.t3,fontWeight:700,letterSpacing:".1em",
+                fontFamily:"var(--f-body)",textTransform:"uppercase"}}>complete</div>
+            </div>
+          </Ring>
+          <div className="disp" style={{fontSize:15,fontWeight:800,color:D.t0,textAlign:"center"}}>
+            {stats.pct>=90?"🏆 Champion!":stats.pct>=70?"🔥 On fire!":stats.pct>=40?"⚡ Building!":"🌱 Starting!"}
           </div>
-        </CircleProgress>
-        <div style={{ flex:1, minWidth:180 }}>
-          <div style={{ fontFamily:"Outfit", fontSize:19, fontWeight:800, color:th.textPrimary, marginBottom:6 }}>
-            {stats.pct>=80?"🔥 Almost there!":stats.pct>=50?"⚡ Great momentum!":stats.pct>=20?"🚀 Keep going!":"🌱 Just getting started"}
+        </Card>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:10}}>
+          {[
+            {label:"Solved",     val:stats.solved,    c:D.green,  ico:"✓",  sub:`of ${stats.total}`},
+            {label:"Attempted",  val:stats.attempted, c:D.amber,  ico:"◑",  sub:"in progress"},
+            {label:"Day Streak", val:streak,          c:D.pink,   ico:"🔥", sub:"consecutive days"},
+            {label:"Study Days", val:totalDays,       c:D.violet, ico:"📅", sub:"total active"},
+          ].map(c=>(
+            <Card key={c.label} glow={c.c} style={{padding:"20px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+                <div>
+                  <div className="mono" style={{fontSize:32,fontWeight:700,color:c.c,lineHeight:1}}>{c.val}</div>
+                  <div style={{fontSize:11,color:D.t3,marginTop:4,fontFamily:"var(--f-body)"}}>{c.sub}</div>
+                </div>
+                <span style={{fontSize:22,opacity:.75}}>{c.ico}</span>
+              </div>
+              <Bar pct={Math.min((Number(c.val)/Math.max(stats.total,1))*100,100)} color={c.c}/>
+              <div style={{fontSize:10,color:D.t4,fontWeight:700,textTransform:"uppercase",
+                letterSpacing:".1em",marginTop:10,fontFamily:"var(--f-body)"}}>{c.label}</div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Multi bar */}
+      <Card cls="a2" style={{padding:"24px 26px",marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:10}}>
+          <h3 className="disp" style={{fontSize:18,fontWeight:800,color:D.t0,letterSpacing:"-.02em"}}>
+            Completion Breakdown
+          </h3>
+          <div style={{display:"flex",gap:14,fontSize:12,fontFamily:"var(--f-body)"}}>
+            {[{c:D.green,l:"Solved"},{c:D.amber,l:"Attempted"},{c:D.t4,l:"Todo"}].map(x=>(
+              <span key={x.l} style={{color:x.c,display:"flex",alignItems:"center",gap:5}}>
+                <span style={{width:8,height:8,borderRadius:2,background:x.c,display:"inline-block"}}/>
+                {x.l}
+              </span>
+            ))}
           </div>
-          <p style={{ color:th.textFaint, fontSize:14, lineHeight:1.65, margin:"0 0 14px" }}>
-            Solved <strong style={{ color:a.green }}>{stats.solved}</strong> problems,
-            attempted <strong style={{ color:a.amber }}>{stats.attempted}</strong> more.
-            {stats.todo>0 ? ` ${stats.todo} still waiting.` : " All done! 🎉"}
-          </p>
-          <div style={{ height:8, background:th.barTrack, borderRadius:99, overflow:"hidden", display:"flex" }}>
-            <div style={{ width:`${(stats.solved/stats.total)*100}%`, background:a.green, transition:"width 1s" }} />
-            <div style={{ width:`${(stats.attempted/stats.total)*100}%`, background:a.amber, transition:"width 1s" }} />
-          </div>
-          <div style={{ display:"flex", gap:14, marginTop:7, fontSize:11 }}>
-            <span style={{ color:a.green }}>■ Solved</span>
-            <span style={{ color:a.amber }}>■ Attempted</span>
-            <span style={{ color:th.textXFaint }}>■ Todo</span>
-          </div>
+        </div>
+        <div style={{height:16,background:"rgba(255,255,255,.06)",borderRadius:999,overflow:"hidden",display:"flex"}}>
+          <div style={{width:`${(stats.solved/stats.total)*100}%`,background:D.green,
+            boxShadow:`0 0 14px ${D.green}60`,transition:"width 1.2s"}}/>
+          <div style={{width:`${(stats.attempted/stats.total)*100}%`,background:D.amber,
+            boxShadow:`0 0 14px ${D.amber}60`,transition:"width 1.2s .1s"}}/>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:10,
+          fontSize:12,color:D.t2,fontFamily:"var(--f-body)"}}>
+          <span>{stats.solved} solved ({Math.round((stats.solved/stats.total)*100)}%)</span>
+          <span>{stats.attempted} attempted</span>
+          <span>{stats.todo} remaining</span>
         </div>
       </Card>
 
-      {/* By Topic */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12, marginBottom:14 }}>
-        {Object.entries(stats.byTopic).map(([topic, data]) => {
-          const col = topicColors[topic] || a.blue;
-          const pct = Math.round((data.solved/data.total)*100);
+      {/* Heatmap */}
+      <Card cls="a2" style={{padding:"24px 26px",marginBottom:14}}>
+        <h3 className="disp" style={{fontSize:18,fontWeight:800,color:D.t0,
+          letterSpacing:"-.02em",marginBottom:20}}>📅 Study Activity (84 days)</h3>
+        <HeatMap sessions={sessions}/>
+      </Card>
+
+      {/* By topic */}
+      <div className="a3" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",
+        gap:10,marginBottom:14}}>
+        {Object.entries(stats.byTopic).map(([topic,data])=>{
+          const col=topColors[topic]||D.cyan;
+          const pct=Math.round((data.solved/data.total)*100);
+          const meta=TOPIC_META[topic]||TOPIC_META.Array;
           return (
-            <Card key={topic} style={{ padding:"16px 20px", border:`1px solid ${col}28` }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                <span style={{ fontWeight:700, color:col, fontSize:14 }}>{topic}</span>
-                <span style={{ fontFamily:"Space Mono", fontSize:12, color:th.textFaint }}>{data.solved}/{data.total}</span>
+            <Card key={topic} glow={col} style={{padding:"20px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:22}}>{meta.emoji}</span>
+                  <span className="disp" style={{fontWeight:800,color:col,fontSize:16}}>{topic}</span>
+                </div>
+                <span className="mono" style={{fontSize:12,color:D.t3}}>{data.solved}/{data.total}</span>
               </div>
-              <div style={{ height:6, background:th.barTrack, borderRadius:99, overflow:"hidden", marginBottom:7 }}>
-                <div style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:99,
-                  transition:"width 1s", boxShadow:`0 0 8px ${col}60` }} />
+              <Bar pct={pct} color={col} h={5}/>
+              <div className="mono" style={{fontSize:12,fontWeight:700,color:col,marginTop:10}}>
+                {pct}% complete
               </div>
-              <div style={{ fontSize:12, fontWeight:700, color:col }}>{pct}% complete</div>
             </Card>
           );
         })}
       </div>
 
-      {/* By Pattern */}
-      <Card style={{ padding:"22px 24px", marginBottom:14 }}>
-        <h3 style={{ fontFamily:"Outfit", fontSize:17, fontWeight:800, color:th.textPrimary, marginBottom:16 }}>
-          Progress by Pattern
-        </h3>
-        <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
-          {Object.entries(stats.byFamily).sort((x,y) => y[1].solved - x[1].solved).map(([family, data]) => {
-            const pct = Math.round((data.solved/data.total)*100);
-            const col = getFamilyColor(family, a);
+      {/* By pattern */}
+      <Card cls="a4" style={{padding:"24px 26px",marginBottom:14}}>
+        <h3 className="disp" style={{fontSize:18,fontWeight:800,color:D.t0,
+          letterSpacing:"-.02em",marginBottom:22}}>Progress by Pattern</h3>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {Object.entries(stats.byFamily).sort((a,b)=>b[1].solved-a[1].solved).map(([fam,data])=>{
+            const pct=Math.round((data.solved/data.total)*100);
+            const col=famCol(fam);
             return (
-              <div key={family} style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <div style={{ width:155, fontSize:11, fontWeight:600, color:th.textFaint, textAlign:"right", flexShrink:0 }}>{family}</div>
-                <div style={{ flex:1, height:5, background:th.barTrack, borderRadius:99, overflow:"hidden" }}>
-                  <div style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:99, transition:"width 1s" }} />
-                </div>
-                <div style={{ width:46, fontSize:10, fontWeight:700, color:col, fontFamily:"Space Mono", flexShrink:0, textAlign:"right" }}>
+              <div key={fam} style={{display:"grid",gridTemplateColumns:"155px 1fr 52px",
+                alignItems:"center",gap:14}}>
+                <div style={{fontSize:12,fontWeight:600,color:D.t2,textAlign:"right",
+                  fontFamily:"var(--f-body)"}}>{fam}</div>
+                <Bar pct={pct} color={col} h={5}/>
+                <div className="mono" style={{fontSize:11,fontWeight:700,color:col,textAlign:"right"}}>
                   {data.solved}/{data.total}
                 </div>
               </div>
@@ -1032,28 +841,566 @@ function StatsPanel({ stats, problems }) {
       </Card>
 
       {/* Solved problems */}
-      {solvedProblems.length > 0 && (
-        <Card style={{ padding:"22px 24px" }}>
-          <h3 style={{ fontFamily:"Outfit", fontSize:17, fontWeight:800, color:th.textPrimary, marginBottom:14 }}>
-            ✅ Solved Problems ({solvedProblems.length})
-          </h3>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:10 }}>
-            {solvedProblems.map(p => {
-              const col = topicColors[p.topic] || a.blue;
+      {solved.length>0&&(
+        <Card cls="a5" style={{padding:"24px 26px"}}>
+          <h3 className="disp" style={{fontSize:18,fontWeight:800,color:D.t0,
+            letterSpacing:"-.02em",marginBottom:18}}>✅ Solved Problems ({solved.length})</h3>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(162px,1fr))",gap:8}}>
+            {solved.map(p=>{
+              const col=topColors[p.topic]||D.cyan;
               return (
-                <div key={p.number} style={{ background:th.bgSolvedCard, border:`1px solid ${th.borderSolved}`,
-                  borderRadius:12, padding:"11px 14px" }}>
-                  <div style={{ fontSize:10, fontWeight:700, color:a.green, fontFamily:"Space Mono", marginBottom:4 }}>
+                <div key={p.number} style={{background:`${D.green}09`,
+                  border:`1px solid ${D.green}20`,borderRadius:12,padding:"12px 14px",
+                  transition:"transform .15s,box-shadow .15s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";
+                    e.currentTarget.style.boxShadow=`0 8px 24px ${D.green}20`;}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform="none";
+                    e.currentTarget.style.boxShadow="none";}}>
+                  <div className="mono" style={{fontSize:10,fontWeight:700,color:D.green,marginBottom:5}}>
                     #{String(p.number).padStart(3,"0")}
                   </div>
-                  <div style={{ fontSize:13, fontWeight:600, color:th.textPrimary, lineHeight:1.3 }}>{p.title}</div>
-                  <div style={{ fontSize:10, color:col, marginTop:4 }}>{p.topic}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:D.t1,lineHeight:1.3,
+                    fontFamily:"var(--f-body)"}}>{p.title}</div>
+                  <div style={{fontSize:11,color:col,marginTop:5,fontFamily:"var(--f-body)"}}>{p.topic}</div>
                 </div>
               );
             })}
           </div>
         </Card>
       )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════════════════════════ */
+function Sidebar({problems, stats, selectedId, setSelectedId, setSidebarOpen}) {
+  const [q,setQ]=useState("");
+  const [topic,setTopic]=useState("All");
+  const [status,setStatus]=useState("All");
+  const [family,setFamily]=useState("All");
+
+  const FAMS=["All","Sliding Window","Prefix/Diff","Hashing","Two Pointers",
+    "Stack/Deque","Heap/PQ","Binary Search","Greedy","DFS/BFS","DP","Backtracking","Simulation","Core"];
+
+  const filtered=useMemo(()=>{
+    const ql=q.toLowerCase();
+    return problems.filter(p=>{
+      const ms=!ql||p.title.toLowerCase().includes(ql)||
+        p.family.toLowerCase().includes(ql)||p.trigger_phrase.toLowerCase().includes(ql);
+      return ms&&(topic==="All"||p.topic===topic)&&
+        (status==="All"||p.userState.status===status)&&
+        (family==="All"||p.family===family);
+    });
+  },[problems,q,topic,status,family]);
+
+  const hasF=q||topic!=="All"||status!=="All"||family!=="All";
+  const reset=()=>{setQ("");setTopic("All");setStatus("All");setFamily("All");};
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
+      {/* Mini stats */}
+      <div style={{padding:"14px 12px 0",flexShrink:0}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginBottom:12}}>
+          {[{v:stats.solved,l:"Solved",c:D.green},{v:stats.attempted,l:"Tried",c:D.amber},{v:stats.todo,l:"Todo",c:D.t3}].map(s=>(
+            <div key={s.l} style={{background:D.bg4,border:`1px solid ${D.b1}`,
+              borderRadius:10,padding:"8px 6px",textAlign:"center"}}>
+              <div className="mono" style={{fontSize:22,fontWeight:700,color:s.c,lineHeight:1}}>{s.v}</div>
+              <div style={{fontSize:10,color:D.t4,fontWeight:700,textTransform:"uppercase",
+                letterSpacing:".08em",marginTop:3,fontFamily:"var(--f-body)"}}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{marginBottom:14}}>
+          <Bar pct={stats.pct} color={D.cyan} h={4}/>
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:5,
+            fontSize:11,color:D.t3,fontFamily:"var(--f-body)"}}>
+            <span>Overall</span>
+            <span className="mono" style={{color:D.cyan,fontWeight:700}}>{stats.pct}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div style={{padding:"0 12px 10px",flexShrink:0,borderBottom:`1px solid ${D.b0}`}}>
+        {/* Search */}
+        <div style={{position:"relative",marginBottom:8}}>
+          <svg style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",
+            color:D.t3,pointerEvents:"none"}}
+            width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" placeholder="Search…" value={q}
+            onChange={e=>setQ(e.target.value)}
+            style={{width:"100%",background:D.bg4,border:`1px solid ${D.b1}`,borderRadius:10,
+              padding:"9px 32px 9px 32px",fontSize:13,color:D.t0,
+              transition:"border-color .2s,box-shadow .2s"}}
+            onFocus={e=>{e.target.style.borderColor=`${D.cyan}55`;
+              e.target.style.boxShadow=`0 0 0 3px ${D.cyan}10`;}}
+            onBlur={e=>{e.target.style.borderColor=D.b1;e.target.style.boxShadow="none";}}
+          />
+          {q&&<button className="btn" onClick={()=>setQ("")}
+            style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",
+              color:D.t3,fontSize:14}}>✕</button>}
+        </div>
+
+        {/* Topic */}
+        <div style={{display:"flex",gap:4,marginBottom:7}}>
+          {["All","Array","String","Grid"].map(tp=>{
+            const col={Array:D.cyan,String:D.violet,Grid:D.green}[tp]||D.cyan;
+            const on=topic===tp;
+            return (
+              <button key={tp} className="btn" onClick={()=>setTopic(tp)}
+                style={{flex:1,padding:"6px 4px",borderRadius:8,fontSize:11,fontWeight:700,
+                  fontFamily:"var(--f-body)",
+                  border:on?`1px solid ${col}40`:`1px solid ${D.b1}`,
+                  background:on?`${col}16`:D.bg4,color:on?col:D.t3}}>
+                {tp}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selects */}
+        <div style={{display:"flex",gap:6,marginBottom:8}}>
+          {[
+            {v:status,set:setStatus,opts:[["All","All Status"],["todo","To Do"],["attempted","Tried"],["solved","Solved"]]},
+            {v:family,set:setFamily,opts:FAMS.map(f=>[f,f==="All"?"All Patterns":f])},
+          ].map((s,i)=>(
+            <select key={i} value={s.v} onChange={e=>s.set(e.target.value)}
+              style={{flex:1,background:D.bg4,border:`1px solid ${D.b1}`,borderRadius:8,
+                padding:"7px 8px",fontSize:11,color:D.t2,cursor:"pointer",
+                fontFamily:"var(--f-body)"}}>
+              {s.opts.map(([v,l])=><option key={v} value={v} style={{background:D.bg2}}>{l}</option>)}
+            </select>
+          ))}
+        </div>
+
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:11,color:D.t3,fontFamily:"var(--f-body)"}}>
+            {filtered.length} / {problems.length} problems
+          </span>
+          {hasF&&<button className="btn" onClick={reset}
+            style={{color:D.cyan,fontSize:11,fontWeight:700,fontFamily:"var(--f-body)"}}>
+            Reset
+          </button>}
+        </div>
+      </div>
+
+      {/* List */}
+      <div style={{flex:1,overflowY:"auto",padding:"6px 8px 80px"}}>
+        {filtered.length===0?(
+          <div style={{textAlign:"center",padding:"52px 16px"}}>
+            <div style={{fontSize:40,marginBottom:12}}>🔍</div>
+            <div style={{fontSize:14,color:D.t3,marginBottom:10,fontFamily:"var(--f-body)"}}>
+              No problems found
+            </div>
+            <button className="btn" onClick={reset}
+              style={{color:D.cyan,fontWeight:700,fontSize:13,fontFamily:"var(--f-body)"}}>
+              Clear filters
+            </button>
+          </div>
+        ):filtered.map((p,i)=>{
+          const sel=selectedId===p.number;
+          const tc={Array:D.cyan,String:D.violet,Grid:D.green}[p.topic]||D.cyan;
+          const fc2=famCol(p.family);
+          const dotC=p.userState.status==="solved"?D.green:p.userState.status==="attempted"?D.amber:D.t4;
+          return (
+            <button key={p.number} className={`btn prob-row ${sel?"on":""}`}
+              onClick={()=>{setSelectedId(p.number);setSidebarOpen(false);}}
+              style={{textAlign:"left",padding:"11px 12px",borderRadius:12,marginBottom:3,
+                background:sel?`${tc}0f`:"transparent",
+                border:sel?`1px solid ${tc}25`:`1px solid transparent`,
+                position:"relative",display:"block",
+                animation:`fadein .14s ${Math.min(i*.008,.2)}s both`}}>
+              <div style={{display:"flex",alignItems:"center",
+                justifyContent:"space-between",marginBottom:4}}>
+                <div style={{display:"flex",alignItems:"center",gap:7}}>
+                  <span className="mono" style={{fontSize:10,fontWeight:600,color:D.t4}}>
+                    #{String(p.number).padStart(3,"0")}
+                  </span>
+                  <span style={{width:6,height:6,borderRadius:"50%",display:"inline-block",
+                    background:dotC,flexShrink:0,
+                    boxShadow:p.userState.status!=="todo"?`0 0 6px ${dotC}80`:"none"}}/>
+                </div>
+                <span style={{fontSize:10,fontWeight:700,color:tc,background:`${tc}14`,
+                  borderRadius:5,padding:"1px 7px",fontFamily:"var(--f-body)"}}>{p.topic}</span>
+              </div>
+              <div style={{fontSize:13,fontWeight:600,lineHeight:1.3,marginBottom:3,
+                color:sel?D.t0:D.t2,fontFamily:"var(--f-body)"}}>{p.title}</div>
+              <div style={{fontSize:11,fontWeight:500,color:fc2,opacity:.8,
+                fontFamily:"var(--f-body)"}}>{p.family}</div>
+              {sel&&<div style={{position:"absolute",left:0,top:"15%",bottom:"15%",width:3,
+                background:tc,borderRadius:"0 3px 3px 0",boxShadow:`0 0 12px ${tc}`}}/>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ROOT
+═══════════════════════════════════════════════════════════════ */
+export default function App() {
+  const [view,setView]=useState("study");
+  const [selId,setSelId]=useState(1);
+  const [sidebarOpen,setSidebarOpen]=useState(false);
+  const [progress,setProgress]=useState({});
+  const [sessions,setSessions]=useState({});
+  const [syncStatus,setSyncStatus]=useState("idle");
+  const [confetti,setConfetti]=useState(false);
+  const [flashQ,setFlashQ]=useState([]);
+  const [flashIdx,setFlashIdx]=useState(0);
+  const [flashScore,setFlashScore]=useState({got:0,shaky:0,miss:0});
+  const syncT=useRef(null);
+
+  useEffect(()=>{
+    (async()=>{
+      const [prog,sess]=await Promise.all([
+        store.get("dsa-v5-progress"),
+        store.get("dsa-v5-sessions"),
+      ]);
+      if(prog) setProgress(prog);
+      if(sess) setSessions(sess);
+    })();
+  },[]);
+
+  const saveProgress=useCallback((next)=>{
+    clearTimeout(syncT.current);
+    setSyncStatus("saving");
+    syncT.current=setTimeout(async()=>{
+      await store.set("dsa-v5-progress",next);
+      setSyncStatus("saved");
+      setTimeout(()=>setSyncStatus("idle"),2000);
+    },700);
+  },[]);
+
+  const updateStatus=useCallback((id,status)=>{
+    const wasSolved=progress[id]?.status==="solved";
+    setProgress(prev=>{
+      const next={...prev,[id]:{...(prev[id]||{remarks:""}),status}};
+      saveProgress(next); return next;
+    });
+    if(!wasSolved&&status==="solved"){
+      setConfetti(true);
+      const today=new Date().toISOString().slice(0,10);
+      setSessions(prev=>{
+        const next={...prev,[today]:(prev[today]||0)+1};
+        store.set("dsa-v5-sessions",next); return next;
+      });
+    }
+  },[progress,saveProgress]);
+
+  const updateRemarks=useCallback((id,remarks)=>{
+    setProgress(prev=>{
+      const next={...prev,[id]:{...(prev[id]||{status:"todo"}),remarks}};
+      saveProgress(next); return next;
+    });
+  },[saveProgress]);
+
+  const problems=useMemo(()=>handbook.problems.map(p=>({
+    ...p,
+    topic:inferTopic(p),
+    family:inferFamily(p),
+    complexity:extractComplexity(p.detailed_solution),
+    userState:progress[p.number]||{status:"todo",remarks:""},
+  })),[progress]);
+
+  const stats=useMemo(()=>{
+    const total=problems.length;
+    const solved=problems.filter(p=>p.userState.status==="solved").length;
+    const attempted=problems.filter(p=>p.userState.status==="attempted").length;
+    const byTopic={Array:{solved:0,total:0},String:{solved:0,total:0},Grid:{solved:0,total:0}};
+    const byFamily={};
+    problems.forEach(p=>{
+      byTopic[p.topic].total++;
+      if(p.userState.status==="solved") byTopic[p.topic].solved++;
+      if(!byFamily[p.family]) byFamily[p.family]={solved:0,total:0};
+      byFamily[p.family].total++;
+      if(p.userState.status==="solved") byFamily[p.family].solved++;
+    });
+    return{total,solved,attempted,todo:total-solved-attempted,
+      pct:Math.round((solved/total)*100),byTopic,byFamily};
+  },[problems]);
+
+  const selProblem=problems.find(p=>p.number===selId)||problems[0];
+
+  const navigate=useCallback((dir)=>{
+    const idx=problems.findIndex(p=>p.number===selId);
+    const next=problems[idx+dir];
+    if(next) setSelId(next.number);
+  },[problems,selId]);
+
+  const startFlash=useCallback((filter="unsolved")=>{
+    let pool=filter==="unsolved"
+      ?problems.filter(p=>p.userState.status!=="solved")
+      :[...problems];
+    if(!pool.length) pool=[...problems];
+    for(let i=pool.length-1;i>0;i--){
+      const j=~~(Math.random()*(i+1));
+      [pool[i],pool[j]]=[pool[j],pool[i]];
+    }
+    setFlashQ(pool); setFlashIdx(0);
+    setFlashScore({got:0,shaky:0,miss:0});
+    setView("flash");
+  },[problems]);
+
+  const handleRate=useCallback((val)=>{
+    const prob=flashQ[flashIdx];
+    if(prob){
+      const sm={got:"solved",shaky:"attempted",miss:"todo"};
+      updateStatus(prob.number,sm[val]);
+      setFlashScore(s=>({...s,[val]:s[val]+1}));
+    }
+    if(flashIdx<flashQ.length-1) setFlashIdx(i=>i+1);
+  },[flashQ,flashIdx,updateStatus]);
+
+  const views=[{id:"study",label:"Study",icon:"📖"},{id:"stats",label:"Dashboard",icon:"📊"},{id:"flash",label:"Flashcards",icon:"⚡"}];
+
+  return (
+    <div className="root" style={{position:"fixed",inset:0,display:"flex",
+      flexDirection:"column",background:D.bg1,color:D.t0}}>
+      <G/>
+      <Aurora/>
+      <Confetti active={confetti} onDone={()=>setConfetti(false)}/>
+
+      {/* ── HEADER ── */}
+      <header style={{flexShrink:0,zIndex:50,display:"flex",alignItems:"center",
+        justifyContent:"space-between",padding:"0 20px",height:64,
+        background:"rgba(6,10,24,.94)",backdropFilter:"blur(32px)",
+        borderBottom:`1px solid ${D.b1}`}}>
+
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          {/* Mobile hamburger */}
+          <button className="btn show-sm" style={{display:"none"}}
+            onClick={()=>setSidebarOpen(v=>!v)}>
+            <div style={{background:D.bg3,border:`1px solid ${D.b1}`,borderRadius:9,
+              padding:"8px 10px",display:"flex",color:D.t2}}>
+              <svg width="17" height="17" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" strokeWidth="2">
+                {sidebarOpen
+                  ?<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>
+                  :<><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></>
+                }
+              </svg>
+            </div>
+          </button>
+
+          {/* Logo */}
+          <div style={{display:"flex",alignItems:"center",gap:11}}>
+            <div style={{width:40,height:40,borderRadius:13,flexShrink:0,
+              background:"linear-gradient(135deg,#00d4ff,#7b6cf6,#b794f4)",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              boxShadow:"0 0 26px rgba(0,212,255,.5)"}}>
+              <span className="disp" style={{fontSize:20,fontWeight:900,color:"#fff"}}>D</span>
+            </div>
+            <div>
+              <div className="disp" style={{fontWeight:900,fontSize:18,
+                letterSpacing:"-.03em",color:D.t0,lineHeight:1}}>
+                PatternAtlas <span style={{color:D.cyan}}>DSA</span>
+              </div>
+              <div className="mono" style={{fontSize:9,color:D.t4,
+                textTransform:"uppercase",letterSpacing:".14em",marginTop:2}}>
+                100 Problems Handbook
+              </div>
+            </div>
+          </div>
+
+          {/* Nav tabs */}
+          <div className="hide-sm" style={{display:"flex",alignItems:"center",gap:3,
+            background:D.bg3,border:`1px solid ${D.b1}`,borderRadius:13,
+            padding:4,marginLeft:8}}>
+            {views.map(v=>{
+              const on=view===v.id;
+              return (
+                <button key={v.id} className="btn" onClick={()=>setView(v.id)} style={{
+                  padding:"7px 16px",borderRadius:10,fontSize:13,fontWeight:700,
+                  fontFamily:"var(--f-body)",
+                  background:on?`linear-gradient(135deg,${D.cyan}1e,${D.violet}18)`:"transparent",
+                  color:on?D.cyan:D.t3,
+                  border:on?`1px solid ${D.cyan}28`:"1px solid transparent",
+                  boxShadow:on?`0 0 18px ${D.cyan}18`:"none"}}>
+                  {v.icon} {v.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right */}
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          {syncStatus!=="idle"&&(
+            <span className="mono" style={{fontSize:11,fontWeight:700,
+              color:syncStatus==="saved"?D.green:D.t3,
+              display:"flex",alignItems:"center",gap:5}}>
+              {syncStatus==="saving"&&
+                <span style={{width:9,height:9,border:`2px solid ${D.cyan}`,
+                  borderTopColor:"transparent",borderRadius:"50%",
+                  animation:"spin .65s linear infinite",display:"inline-block"}}/>
+              }
+              {syncStatus==="saving"?"Syncing…":"✓ Saved"}
+            </span>
+          )}
+          <div className="hide-sm" style={{display:"flex",flexDirection:"column",
+            alignItems:"flex-end",gap:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:11,color:D.t3,fontFamily:"var(--f-body)"}}>Progress</span>
+              <span className="mono" style={{fontSize:14,fontWeight:700,color:D.cyan}}>
+                {stats.pct}%
+              </span>
+            </div>
+            <div style={{width:120,height:3,background:"rgba(255,255,255,.07)",
+              borderRadius:99,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${stats.pct}%`,
+                background:`linear-gradient(90deg,${D.cyan},${D.violet})`,
+                borderRadius:99,transition:"width 1s",
+                boxShadow:`0 0 10px ${D.cyan}80`}}/>
+            </div>
+          </div>
+          <button className="btn hide-sm" onClick={()=>startFlash("unsolved")} style={{
+            background:`${D.amber}12`,border:`1px solid ${D.amber}30`,
+            borderRadius:10,padding:"8px 16px",color:D.amber,
+            fontSize:12,fontWeight:700,fontFamily:"var(--f-body)",
+            display:"flex",alignItems:"center",gap:6}}>
+            ⚡ Flash Drill
+          </button>
+        </div>
+      </header>
+
+      {/* ── BODY ── */}
+      <div style={{flex:1,display:"flex",overflow:"hidden",position:"relative",zIndex:1}}>
+
+        {/* Mobile overlay */}
+        {sidebarOpen&&(
+          <div className="show-sm" onClick={()=>setSidebarOpen(false)}
+            style={{display:"none",position:"fixed",inset:0,
+              background:"rgba(0,0,0,.78)",zIndex:399}}/>
+        )}
+
+        {/* Sidebar */}
+        {view!=="flash"&&(
+          <aside className={`sidebar ${sidebarOpen?"open":""}`}
+            style={{width:308,flexShrink:0,display:"flex",flexDirection:"column",
+              background:"rgba(6,10,24,.97)",backdropFilter:"blur(36px)",
+              borderRight:`1px solid ${D.b0}`,zIndex:400}}>
+            <Sidebar problems={problems} stats={stats}
+              selectedId={selId} setSelectedId={setSelId}
+              setSidebarOpen={setSidebarOpen}/>
+          </aside>
+        )}
+
+        {/* Main */}
+        <main style={{flex:1,overflowY:"auto",position:"relative"}}>
+          {view==="study"&&(
+            <DetailView key={selId} problem={selProblem} allProblems={problems}
+              onNav={navigate} onStatus={updateStatus} onRemarks={updateRemarks}/>
+          )}
+
+          {view==="stats"&&(
+            <StatsView stats={stats} problems={problems} sessions={sessions}/>
+          )}
+
+          {view==="flash"&&(
+            <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+              {/* Flash header */}
+              <div style={{padding:"14px 24px",borderBottom:`1px solid ${D.b1}`,
+                display:"flex",alignItems:"center",justifyContent:"space-between",
+                flexWrap:"wrap",gap:10,flexShrink:0,
+                background:"rgba(6,10,24,.88)",backdropFilter:"blur(20px)"}}>
+                <div>
+                  <div className="disp" style={{fontSize:20,fontWeight:800,color:D.t0,
+                    letterSpacing:"-.02em"}}>⚡ Flashcard Drill</div>
+                  <div style={{fontSize:12,color:D.t3,marginTop:2,fontFamily:"var(--f-body)"}}>
+                    {flashQ.length} cards · {flashScore.got} got · {flashScore.shaky} shaky · {flashScore.miss} missed
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {[
+                    {l:"🔀 All Cards",    fn:()=>startFlash("all"),     c:D.t2,  bc:D.b2, bg:D.bg3},
+                    {l:"🎯 Unsolved",     fn:()=>startFlash("unsolved"), c:D.amber,bc:`${D.amber}30`,bg:`${D.amber}12`},
+                    {l:"← Back to Study",fn:()=>setView("study"),       c:D.t2,  bc:D.b2, bg:D.bg3},
+                  ].map(a=>(
+                    <button key={a.l} className="btn" onClick={a.fn}
+                      style={{background:a.bg,border:`1px solid ${a.bc}`,borderRadius:10,
+                        padding:"8px 14px",color:a.c,fontSize:12,fontWeight:700,
+                        fontFamily:"var(--f-body)"}}>
+                      {a.l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Flash body */}
+              <div style={{flex:1,overflowY:"auto"}}>
+                {flashQ[flashIdx]?(
+                  <FlashCard problem={flashQ[flashIdx]} total={flashQ.length}
+                    idx={flashIdx} onRate={handleRate}/>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",
+                    justifyContent:"center",height:"100%",gap:20,padding:"40px"}}>
+                    <div style={{fontSize:80,animation:"float 3s ease-in-out infinite"}}>🎉</div>
+                    <div className="disp" style={{fontSize:30,fontWeight:900,color:D.t0,
+                      textAlign:"center",letterSpacing:"-.03em"}}>Deck Complete!</div>
+                    <div style={{fontSize:16,color:D.t2,textAlign:"center",
+                      fontFamily:"var(--f-body)"}}>
+                      <span style={{color:D.green}}>{flashScore.got} got</span>{" · "}
+                      <span style={{color:D.amber}}>{flashScore.shaky} shaky</span>{" · "}
+                      <span style={{color:D.red}}>{flashScore.miss} missed</span>
+                    </div>
+                    <div style={{display:"flex",gap:10,marginTop:8}}>
+                      <button className="btn" onClick={()=>startFlash("all")}
+                        style={{padding:"13px 28px",borderRadius:14,fontSize:14,fontWeight:700,
+                          fontFamily:"var(--f-body)",
+                          background:`${D.cyan}14`,border:`1px solid ${D.cyan}32`,color:D.cyan}}>
+                        Restart Deck
+                      </button>
+                      <button className="btn" onClick={()=>setView("study")}
+                        style={{padding:"13px 28px",borderRadius:14,fontSize:14,fontWeight:700,
+                          fontFamily:"var(--f-body)",
+                          background:D.bg3,border:`1px solid ${D.b2}`,color:D.t2}}>
+                        Back to Study
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <nav className="show-sm" style={{display:"none",position:"fixed",bottom:0,
+        left:0,right:0,zIndex:200,
+        background:"rgba(6,10,24,.97)",backdropFilter:"blur(32px)",
+        borderTop:`1px solid ${D.b1}`,padding:"8px 12px 22px",gap:4}}>
+        {[
+          {id:"study",  label:"Study",    icon:"📖"},
+          {id:"stats",  label:"Stats",    icon:"📊"},
+          {id:"flash",  label:"Flash",    icon:"⚡"},
+          {id:"__list", label:"Problems", icon:"☰"},
+        ].map(v=>{
+          const isL=v.id==="__list";
+          const on=isL?(sidebarOpen&&view==="study"):view===v.id;
+          return (
+            <button key={v.id} className="btn" onClick={()=>{
+              if(isL){setView("study");setSidebarOpen(o=>!o);}
+              else{setView(v.id);setSidebarOpen(false);}
+            }} style={{flex:1,padding:"9px 4px",borderRadius:12,fontSize:11,fontWeight:700,
+              fontFamily:"var(--f-body)",
+              background:on?`${D.cyan}14`:"transparent",
+              color:on?D.cyan:D.t3,
+              border:on?`1px solid ${D.cyan}25`:"1px solid transparent",
+              flexDirection:"column",display:"flex",alignItems:"center",gap:3}}>
+              <span style={{fontSize:16}}>{v.icon}</span>
+              {v.label}
+            </button>
+          );
+        })}
+      </nav>
     </div>
   );
 }
