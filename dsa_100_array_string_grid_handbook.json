@@ -802,6 +802,918 @@
       "pattern_explanation": "When you need to build a path letter by letter without reusing cells, DFS with backtracking is the natural pattern. Each call represents a prefix decision and undoes itself on return.",
       "trigger_phrase": "This is path search with constraints and prefix matching, so backtracking is natural. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
       "detailed_solution": "Start DFS from every cell matching the first character. At each step, mark the current cell as used, try all valid neighbors for the next character, and unmark on return. Success occurs when all characters are matched. Worst-case time is exponential in word length, but pruning is strong in practice. Space: recursion depth **O(word length)**."
-    }
+    },
+    {
+    "number": 101,
+    "title": "Two Sum II – Input Array Is Sorted",
+    "problem_statement": "Given a 1-indexed sorted array and a target, return the indices of two numbers that add up to the target using O(1) extra space.",
+    "pattern_explanation": "When the array is sorted, two pointers replace the hashmap entirely. The left pointer moves right on a small sum and the right pointer moves left on a large sum, converging to the answer without any extra space.",
+    "trigger_phrase": "Sorted array plus pair-sum question is the classic two-pointer trigger—no hashmap needed. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Place one pointer at index 0 and one at the last index. If their sum equals target, return both. If less, advance left; if greater, retreat right. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 102,
+    "title": "4Sum",
+    "problem_statement": "Find all unique quadruplets in an array that sum to a given target.",
+    "pattern_explanation": "4Sum extends the 3Sum pattern: fix two outer pointers with duplicate-skipping, then run two-pointer inner search for the remaining pair. Sorting enables both the skipping and the two-pointer convergence.",
+    "trigger_phrase": "When the problem is k-Sum for k > 2 with unique combinations, reduce recursively to two-pointer base case. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Sort the array. Use two nested loops for the first two elements (skipping duplicates at each level), then run two-pointer search for the inner pair summing to the remaining target. Collect unique quadruplets. Time: **O(n^3)**. Space: **O(1)** excluding output."
+  },
+  {
+    "number": 103,
+    "title": "Find the Difference",
+    "problem_statement": "Given string s and string t which is s plus one extra random character shuffled, find the extra character.",
+    "pattern_explanation": "XOR of two equal sets cancels to zero; any extra value survives. Alternatively, character-sum difference isolates the extra. Both are O(n) time, O(1) space bit-manipulation tricks.",
+    "trigger_phrase": "One extra element among otherwise identical collections—XOR or sum-difference kills duplicates instantly. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "XOR all characters in s and t together. Every paired character cancels; the result is the extra character. Alternatively, sum ordinal values of t minus ordinal values of s. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 104,
+    "title": "Subarray Product Less Than K",
+    "problem_statement": "Count the number of contiguous subarrays whose product is strictly less than k.",
+    "pattern_explanation": "A variable-size window works here because all values are positive, so expanding the window always grows the product and shrinking always reduces it. Counting valid subarrays ending at the right pointer uses the window length directly.",
+    "trigger_phrase": "Positive integers plus product bound on subarrays—think multiplicative sliding window. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Maintain a running product. Expand right pointer every step; when product >= k, shrink from the left. Every right position contributes (right - left + 1) valid subarrays. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 105,
+    "title": "Maximum Product Subarray",
+    "problem_statement": "Find the contiguous subarray with the largest product.",
+    "pattern_explanation": "Negatives flip max and min, so you must track both simultaneously. At each step, the new max is the best of the current element alone, current element times old max, or current element times old min (two negatives make a positive).",
+    "trigger_phrase": "Product with negatives forces tracking both max and min in parallel—Kadane's product variant. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Track cur_max and cur_min alongside global_max. For each element x, new cur_max = max(x, x*cur_max, x*cur_min); new cur_min = min(x, x*cur_max, x*cur_min). Update global_max each step. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 106,
+    "title": "Maximum Subarray (Kadane's Algorithm)",
+    "problem_statement": "Find the contiguous subarray with the largest sum.",
+    "pattern_explanation": "Kadane's algorithm decides at each step whether to extend the current subarray or restart from the current element. The key insight is: a negative running sum is always a liability—discard it and start fresh.",
+    "trigger_phrase": "Maximum-sum contiguous subarray is the canonical Kadane's trigger. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Maintain cur_sum = max(nums[i], cur_sum + nums[i]) and global_max updated at each step. Return global_max. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 107,
+    "title": "Count Good Pairs",
+    "problem_statement": "Count pairs (i, j) where i < j and nums[i] == nums[j].",
+    "pattern_explanation": "A frequency map tells how many times each value has appeared before the current index. For each value seen f times so far, it contributes f new valid pairs with the current element.",
+    "trigger_phrase": "Counting equal-value pairs without explicit nested loops—frequency count of prior occurrences is the trick. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Maintain a frequency map. For each element x, add freq[x] to the answer, then increment freq[x]. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 108,
+    "title": "Running Sum of 1d Array",
+    "problem_statement": "Return the running sum of an array where runningSum[i] = sum(nums[0] through nums[i]).",
+    "pattern_explanation": "This is the foundational prefix-sum construction step. Understanding it in isolation makes every more complex prefix problem immediate—each position simply accumulates the total from the left.",
+    "trigger_phrase": "Build the prefix array in place—update each position with the accumulated sum from the left. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Iterate from index 1; set nums[i] += nums[i-1]. Return the modified array. Time: **O(n)**. Space: **O(1)** in-place."
+  },
+  {
+    "number": 109,
+    "title": "Number of Ways to Split Array",
+    "problem_statement": "Count valid split indices where the prefix sum on the left is >= the suffix sum on the right.",
+    "pattern_explanation": "Prefix sum lets you evaluate the left and right partition sums in O(1) for every split point after O(n) preprocessing. The pattern generalises to any split-at-index problem with aggregate queries.",
+    "trigger_phrase": "Valid split count with sum comparisons—prefix array gives O(1) per split. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Compute total sum. Scan with running left_sum; for each split index i, check if left_sum >= total - left_sum. Increment count. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 110,
+    "title": "Maximum Sum of Two Non-Overlapping Subarrays",
+    "problem_statement": "Given lengths L and M, find the maximum sum of one subarray of length L and one of length M that do not overlap.",
+    "pattern_explanation": "Prefix sums let you compute any fixed-length window sum in O(1). The trick is to sweep one window and simultaneously track the best opposite-side window seen so far on each pass.",
+    "trigger_phrase": "Two fixed-length non-overlapping windows—prefix sums plus a running best-so-far for each side. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Precompute prefix sums. Sweep right: for each right endpoint of the M-window, maintain best L-window sum seen to the left (and vice versa for L before M). Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 111,
+    "title": "Minimum Value to Get Positive Step by Step Sum",
+    "problem_statement": "Find the minimum positive start value such that the running sum is always at least 1 at every step.",
+    "pattern_explanation": "Compute prefix sums and find the minimum. The start value needed is 1 minus that minimum, at least 1. This converts a constraint-on-running-sum problem to a simple minimum-prefix query.",
+    "trigger_phrase": "Minimum start to keep prefix always positive—find the minimum prefix sum. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Compute prefix sums; find min_prefix. Answer is max(1, 1 - min_prefix). Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 112,
+    "title": "Diet Plan Performance",
+    "problem_statement": "Given a calorie log and window size k, for each window score +1 if sum > upper, -1 if sum < lower, else 0. Return total score.",
+    "pattern_explanation": "Fixed-size window with O(1) per-step sum update. Each new window adds one element and removes one, enabling constant-time evaluation against the thresholds.",
+    "trigger_phrase": "Fixed-size window sum score—slide and evaluate in constant time per step. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Compute sum of first k elements. Slide: add nums[i], subtract nums[i-k], evaluate against bounds, update score. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 113,
+    "title": "Maximum Average Subarray I",
+    "problem_statement": "Find the maximum average value among all contiguous subarrays of a fixed length k.",
+    "pattern_explanation": "Fixed-size sliding window: maintain a running window sum, update in O(1) per step, and track the maximum. Dividing by k at the end avoids floating-point operations inside the loop.",
+    "trigger_phrase": "Maximum average over fixed-length windows—slide the sum, divide once at the end. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Sum the first k elements. Slide: add the new element, subtract the departed element, compare to best. Return best / k. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 114,
+    "title": "Maximum Average Subarray II",
+    "problem_statement": "Find the maximum average among all subarrays of length at least k.",
+    "pattern_explanation": "Binary search on the answer combined with prefix sums: guess a mid average, subtract it from every element, and check if any subarray of length >= k has non-negative sum. This transforms an optimization into a feasibility question.",
+    "trigger_phrase": "Maximum average with minimum length—binary search on the answer, check feasibility with adjusted prefix sums. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Binary search on average value mid. Subtract mid from each element to get adjusted array. Check if any subarray of length >= k has sum >= 0 using prefix sums and a running minimum of prefix[i-k]. Time: **O(n log(max-min))**. Space: **O(n)**."
+  },
+  {
+    "number": 115,
+    "title": "Minimum Swaps to Group All 1s Together",
+    "problem_statement": "Find the minimum number of swaps to group all 1s in an array (or circular array) into a contiguous block.",
+    "pattern_explanation": "Count total 1s = window size needed. A fixed sliding window of that size counts 1s inside; the zeros inside are exactly the swaps needed. Minimize zeros in the window.",
+    "trigger_phrase": "Minimum swaps to cluster values—count target elements, slide a fixed window of that size, count mismatches. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Count ones = w. Slide a window of size w, count zeros inside. Track minimum. For circular, concatenate array with itself. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 116,
+    "title": "Maximum Number of Vowels in a Substring of Given Length",
+    "problem_statement": "Find the maximum number of vowels in any substring of length k.",
+    "pattern_explanation": "Fixed-size sliding window. Count vowels in the first window, then slide: add contribution of the new character and remove the departing character.",
+    "trigger_phrase": "Maximum count of a character type in a fixed-length window—slide and update in O(1). The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Count vowels in s[:k]. Slide: if s[i] is vowel, add 1; if s[i-k] is vowel, subtract 1. Track maximum. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 117,
+    "title": "Max Consecutive Ones",
+    "problem_statement": "Find the maximum number of consecutive 1s in a binary array.",
+    "pattern_explanation": "Single scan with a running counter. Reset to 0 on encountering a 0, update maximum otherwise. The simplest subarray run-length problem.",
+    "trigger_phrase": "Longest run of a specific value—running counter reset on mismatch. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "cur = 0, best = 0. For each bit: if 1, increment cur and update best; else reset cur to 0. Return best. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 118,
+    "title": "Longest Turbulent Subarray",
+    "problem_statement": "Find the length of the longest turbulent subarray (alternating strictly greater / strictly less comparisons).",
+    "pattern_explanation": "Sliding window where validity depends on alternating sign of adjacent differences. Expand if the sign alternates; reset the window start otherwise.",
+    "trigger_phrase": "Longest alternating comparison run—sliding window tracking alternating sign pattern. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Maintain window start and previous comparison sign. Expand right: if sign alternates, extend; if same sign, reset start to i-1; if equal, reset start to i. Update max. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 119,
+    "title": "Maximum Erasure Value",
+    "problem_statement": "Find the maximum sum of a subarray with all unique elements.",
+    "pattern_explanation": "Sliding window maintaining a set of distinct elements. On duplicate, shrink from the left until the duplicate is removed. Maintain a running window sum for O(1) sum updates.",
+    "trigger_phrase": "Maximum sum subarray with all distinct elements—sliding window with set for uniqueness. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Sliding window with a set. Maintain cur_sum. Expand right adding to set and sum. On duplicate, shrink left removing from set and sum. Track max cur_sum. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 120,
+    "title": "Move Zeroes",
+    "problem_statement": "Move all 0s to the end of an array in-place while maintaining the relative order of non-zero elements.",
+    "pattern_explanation": "A write pointer advances only on non-zero elements. After placing all non-zeros, fill the remainder with zeros. This is the partition step of the fast-slow pointer pattern.",
+    "trigger_phrase": "Partition in-place without sorting—write pointer skips over unwanted values. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Write pointer w = 0. For each element that is non-zero, place it at nums[w] and advance w. Fill indices w through end with 0. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 121,
+    "title": "Remove Duplicates from Sorted Array II",
+    "problem_statement": "Allow each element to appear at most twice in a sorted array in-place; return the new length.",
+    "pattern_explanation": "A write pointer and a read pointer, plus a count of consecutive duplicates, form the complete solution. This generalises the remove-duplicates pattern to any allowed count k.",
+    "trigger_phrase": "In-place deduplication with a max-occurrence limit—slow-fast write pointer with a counter. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Maintain write pointer w starting at 0. For each element, check if w < 2 or nums[w-2] != current element; if so, write and advance. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 122,
+    "title": "Valid Triangle Number",
+    "problem_statement": "Count the number of triplets that can form a valid triangle.",
+    "pattern_explanation": "Sort the array. Fix the largest side, then use two pointers on the remaining prefix. If left + right > largest, all subarrays with any right' in [left, right-1] are also valid—count them in O(1) and move right in.",
+    "trigger_phrase": "Triangle inequality on triplets after sorting—two-pointer counting telescopes valid pairs. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Sort. For each i from n-1 down to 2, place two pointers l=0, r=i-1. While l < r: if nums[l]+nums[r] > nums[i], add r-l and move r left; else move l right. Time: **O(n^2)**. Space: **O(1)**."
+  },
+  {
+    "number": 123,
+    "title": "Largest Number",
+    "problem_statement": "Arrange an array of non-negative integers to form the largest possible number.",
+    "pattern_explanation": "Custom comparator: for any two strings a and b, compare ab vs ba lexicographically. This defines a total order that directly maximises the concatenated result.",
+    "trigger_phrase": "Largest concatenation—define a custom comparator comparing ab vs ba. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Convert integers to strings. Sort with comparator: a before b if a+b > b+a lexicographically. Handle all-zero edge case. Join and return. Time: **O(n log n)**. Space: **O(n)**."
+  },
+  {
+    "number": 124,
+    "title": "Minimum Cost to Connect Sticks",
+    "problem_statement": "Connect all sticks with minimum cost where cost equals the sum of two sticks being connected each time.",
+    "pattern_explanation": "This is Huffman coding in disguise. Always merge the two smallest sticks first. A min-heap makes the two smallest available in O(log n) per extraction and insertion.",
+    "trigger_phrase": "Minimum cost merging by always combining the two smallest—min-heap greedy. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Insert all sticks into a min-heap. Repeatedly pop two smallest, add their sum to total cost, and push the combined stick. Repeat until one element remains. Time: **O(n log n)**. Space: **O(n)**."
+  },
+  {
+    "number": 125,
+    "title": "Partition Array Into Three Parts With Equal Sum",
+    "problem_statement": "Determine if an array can be partitioned into three contiguous parts with equal sum.",
+    "pattern_explanation": "If the total is not divisible by 3, return false. Otherwise, scan and count how many times prefix sum hits target and 2*target. Two hits before reaching the end means the third part is valid.",
+    "trigger_phrase": "Three-part equal sum—check divisibility by 3 then count prefix sum milestones. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "If total % 3 != 0, return false. target = total/3. Scan with running sum, count times it hits target and 2*target. If both found before end, return true. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 126,
+    "title": "Maximum Points You Can Obtain from Cards",
+    "problem_statement": "Choose k cards from either end of an array to maximise the sum.",
+    "pattern_explanation": "Sliding window complement: the cards NOT taken form a contiguous window of size n-k in the middle. Minimising the middle window sum is equivalent to maximising the chosen cards sum.",
+    "trigger_phrase": "Take k from ends to maximise—minimise the complementary middle window of size n-k. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Compute total sum and window_sum of first n-k elements. Slide the window right: add right element, remove left. Track min window sum. Answer = total - min_window. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 127,
+    "title": "Minimum Number of Consecutive Cards to Pick Up",
+    "problem_statement": "Find the minimum number of consecutive cards to pick up to guarantee a matching pair.",
+    "pattern_explanation": "Track the last seen index of each card value in a hashmap. When a card is seen again, the window from the previous occurrence to now (inclusive) is a candidate for minimum length.",
+    "trigger_phrase": "Shortest window containing a repeated element—last-seen hashmap, update minimum on revisit. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Hashmap of value to last index. For each card, if seen before, update min_window = min(min_window, i - last[val] + 1). Update last[val] = i. Return min_window or -1. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 128,
+    "title": "Next Greater Element I",
+    "problem_statement": "For each element in nums1 (a subset of nums2), find the next greater element in nums2.",
+    "pattern_explanation": "Monotonic decreasing stack processes nums2 once. When a larger element arrives, it is the answer for everything still on the stack that is smaller. Precompute a map, then answer queries in O(1).",
+    "trigger_phrase": "Next greater in a reference array for query indices—monotonic stack on the reference, map lookup for queries. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Process nums2 with a stack. When element x is popped by a larger y, store map[x] = y. For each element in nums1, return map.get(element, -1). Time: **O(m+n)**. Space: **O(n)**."
+  },
+  {
+    "number": 129,
+    "title": "Sum of Subarray Minimums",
+    "problem_statement": "Find the sum of minimums of every subarray.",
+    "pattern_explanation": "For each element, compute the number of subarrays where it is the minimum using left and right boundaries (next smaller element). Monotonic stack finds all boundary distances in two O(n) passes.",
+    "trigger_phrase": "Sum over all subarrays of some property—contribution technique with monotonic stack to find each element's domain. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Use a monotonic stack to find for each element: left[i] = distance to previous smaller, right[i] = distance to next smaller (or equal). Contribution = nums[i] * left[i] * right[i]. Sum all contributions mod 1e9+7. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 130,
+    "title": "Remove K Digits",
+    "problem_statement": "Remove k digits from a number string to produce the smallest possible remaining number.",
+    "pattern_explanation": "Greedy: maintain a monotonic increasing stack. When a digit is smaller than the top, the top should be removed (it makes the number larger). Remove at most k digits total.",
+    "trigger_phrase": "Remove digits to minimise the number—monotonic increasing stack greedily removes large leading digits. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Iterate digits. While k > 0 and stack top > current digit, pop and decrement k. Push current. After loop, if k > 0, pop k from end. Strip leading zeros. Handle empty case. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 131,
+    "title": "132 Pattern",
+    "problem_statement": "Find if there exists a 132 pattern: indices i < j < k such that nums[i] < nums[k] < nums[j].",
+    "pattern_explanation": "Process right to left with a monotonic decreasing stack. Track the third value as the largest popped value below the current element. If any future (leftward) element is smaller than that third value, the pattern exists.",
+    "trigger_phrase": "132 pattern detection—process right-to-left with a monotonic stack tracking the 'middle' element. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Iterate right to left. Maintain a monotonic stack and a variable third = -inf. Pop elements smaller than current into third. If current < third, the 132 pattern exists. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 132,
+    "title": "Maximal Rectangle",
+    "problem_statement": "Find the largest rectangle containing only 1s in a binary matrix.",
+    "pattern_explanation": "Build a heights array row by row: each cell's height is the number of consecutive 1s above it including itself. Each row's heights array is a histogram; apply the largest-rectangle-in-histogram algorithm row by row.",
+    "trigger_phrase": "Maximal all-1s rectangle in a matrix—reduce to histogram per row and apply monotonic stack. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "For each row, update heights[j] = heights[j]+1 if matrix[row][j]=='1' else 0. Apply largest rectangle in histogram (monotonic stack) to heights. Track global maximum. Time: **O(rows*cols)**. Space: **O(cols)**."
+  },
+  {
+    "number": 133,
+    "title": "Find Peak Element",
+    "problem_statement": "Find any peak element—an element strictly greater than its neighbours—in O(log n).",
+    "pattern_explanation": "Binary search works on arrays that are not fully sorted by using the slope direction. If the mid element is smaller than its right neighbour, a peak must exist to the right; otherwise it exists to the left or at mid.",
+    "trigger_phrase": "Find any peak in O(log n) without full sorting—binary search on the slope direction. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Binary search with lo=0, hi=n-1. If nums[mid] < nums[mid+1], move lo = mid+1; else hi = mid. Return lo when lo == hi. Time: **O(log n)**. Space: **O(1)**."
+  },
+  {
+    "number": 134,
+    "title": "Search a 2D Matrix",
+    "problem_statement": "Search for a target in an m x n matrix where each row is sorted and the first element of each row is greater than the last of the previous row.",
+    "pattern_explanation": "Treat the matrix as a flat sorted array of m*n elements and perform standard binary search. Row and column indices are derived from the flat index via division and modulo.",
+    "trigger_phrase": "Sorted matrix with inter-row ordering—flatten logically and binary search. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Binary search on [0, m*n-1]. For mid, row = mid // n, col = mid % n. Compare matrix[row][col] with target. Time: **O(log(m*n))**. Space: **O(1)**."
+  },
+  {
+    "number": 135,
+    "title": "Search a 2D Matrix II",
+    "problem_statement": "Search for a target in an m x n matrix where each row and column is sorted independently.",
+    "pattern_explanation": "Start at the top-right corner. If the current value equals target, done. If larger, move left (eliminate column). If smaller, move down (eliminate row). Each step eliminates an entire row or column.",
+    "trigger_phrase": "Row-sorted and column-sorted matrix—staircase search from top-right eliminates a row or column each step. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Start at row=0, col=n-1. While within bounds: if match return true; if too big, col--; if too small, row++. Time: **O(m+n)**. Space: **O(1)**."
+  },
+  {
+    "number": 136,
+    "title": "Single Element in a Sorted Array",
+    "problem_statement": "In a sorted array where every element appears exactly twice except one, find the single element in O(log n).",
+    "pattern_explanation": "Binary search on even indices. Before the single element, pairs start at even indices; after it, pairs shift to odd indices. The parity check at mid determines which side the singleton is on.",
+    "trigger_phrase": "Single non-repeated element in sorted paired array—binary search on even-index parity shift. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Binary search with lo and hi on even indices. If nums[mid] == nums[mid+1], singleton is to the right, set lo = mid + 2; else hi = mid. Return nums[lo]. Time: **O(log n)**. Space: **O(1)**."
+  },
+  {
+    "number": 137,
+    "title": "Minimum Speed to Arrive on Time",
+    "problem_statement": "Find the minimum integer speed such that all train rides complete within a given total time.",
+    "pattern_explanation": "Binary search on speed. The feasibility function computes total time at a given speed (ceiling division for non-last trains). Monotone in speed—too slow fails, fast enough passes.",
+    "trigger_phrase": "Minimum speed to meet a deadline—binary search the answer and check feasibility. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Binary search on speed in [1, 10^7]. For each candidate, compute time = sum of ceil(dist/speed) for all but last + last_dist/speed (float). If <= hour, record and search lower; else search higher. Time: **O(n log M)**. Space: **O(1)**."
+  },
+  {
+    "number": 138,
+    "title": "Divide Chocolate",
+    "problem_statement": "Cut a chocolate bar into k+1 pieces to maximise the minimum total sweetness of any piece.",
+    "pattern_explanation": "Binary search on the answer (minimum sweetness). The check function greedily counts how many pieces exceed the minimum—if at least k+1, the minimum is achievable.",
+    "trigger_phrase": "Maximise the minimum of partitioned chunks—binary search on the minimum value, greedy feasibility check. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Binary search on minimum sweetness in [min_chunk, total/k]. For each mid, greedily accumulate and cut whenever sum >= mid. If cuts >= k+1, search higher; else lower. Time: **O(n log(sum))**. Space: **O(1)**."
+  },
+  {
+    "number": 139,
+    "title": "Minimum Time to Complete Trips",
+    "problem_statement": "Given buses each with their own trip time, find the minimum time so that all buses collectively complete at least totalTrips trips.",
+    "pattern_explanation": "Binary search on time. The feasibility function sums floor(t / time_i) for each bus. Monotone—short time fails, long enough passes.",
+    "trigger_phrase": "Minimum time for parallel workers to complete total tasks—binary search on time, sum completions per worker. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Binary search on time in [1, min_time * totalTrips]. For each mid, compute sum(mid // t for t in time). If >= totalTrips, search lower; else higher. Time: **O(n log(min*total))**. Space: **O(1)**."
+  },
+  {
+    "number": 140,
+    "title": "Rotate Image",
+    "problem_statement": "Rotate an n x n matrix 90 degrees clockwise in-place.",
+    "pattern_explanation": "Two-step in-place rotation: transpose (swap matrix[i][j] with matrix[j][i]) then reverse each row. Each step is O(n^2) and uses no extra space.",
+    "trigger_phrase": "90-degree clockwise rotation in-place—transpose then reverse each row. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "First transpose: for i < j swap matrix[i][j] and matrix[j][i]. Then reverse each row. Time: **O(n^2)**. Space: **O(1)**."
+  },
+  {
+    "number": 141,
+    "title": "Spiral Matrix",
+    "problem_statement": "Return all elements of an m x n matrix in spiral order.",
+    "pattern_explanation": "Maintain four boundaries: top, bottom, left, right. Traverse each boundary, then shrink it inward. Repeat until boundaries cross. This simulates the spiral without extra visited markers.",
+    "trigger_phrase": "Spiral traversal—four shrinking boundary pointers. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "While top<=bottom and left<=right: traverse top row, right col, bottom row (if top!=bottom), left col (if left!=right). Shrink boundaries. Time: **O(m*n)**. Space: **O(1)**."
+  },
+  {
+    "number": 142,
+    "title": "Spiral Matrix II",
+    "problem_statement": "Generate an n x n matrix filled with numbers 1 to n^2 in spiral order.",
+    "pattern_explanation": "Same four-boundary spiral traversal as spiral reading, but instead of reading cells you write sequential numbers into them.",
+    "trigger_phrase": "Fill matrix in spiral order—four shrinking boundaries, write values in sequence. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Create n x n zero matrix. Four boundaries. Fill top row, right col, bottom row, left col; shrink; repeat while num <= n^2. Time: **O(n^2)**. Space: **O(1)** extra."
+  },
+  {
+    "number": 143,
+    "title": "Set Matrix Zeroes",
+    "problem_statement": "If an element is 0, set its entire row and column to 0 in-place using O(1) extra space.",
+    "pattern_explanation": "Use the first row and first column as markers. First record whether row 0 and col 0 themselves need zeroing, then encode zero information into those headers, and apply zeros in a second pass.",
+    "trigger_phrase": "Zero out rows/columns in-place—use first row and column as O(1) flag arrays. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Record if first row/col have zeros. For rest of matrix, if matrix[i][j]==0, set matrix[i][0] and matrix[0][j] to 0. Second pass: use markers to zero rows and cols. Handle first row/col separately. Time: **O(m*n)**. Space: **O(1)**."
+  },
+  {
+    "number": 144,
+    "title": "Diagonal Traverse",
+    "problem_statement": "Return all elements of an m x n matrix in diagonal order, alternating up-right and down-left.",
+    "pattern_explanation": "Group elements by diagonal index d = row + col. Elements on the same diagonal share the same sum. Alternate the traversal direction for each diagonal.",
+    "trigger_phrase": "Diagonal traversal—group by row+col sum, alternate direction. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Collect m+n-1 diagonal lists indexed by row+col. For even diagonals, reverse the list before appending to output. Time: **O(m*n)**. Space: **O(m*n)**."
+  },
+  {
+    "number": 145,
+    "title": "Lucky Numbers in a Matrix",
+    "problem_statement": "Find all lucky numbers—elements that are the minimum of their row and the maximum of their column.",
+    "pattern_explanation": "Precompute row minimums and column maximums in O(m+n) passes. A lucky number must appear in both sets.",
+    "trigger_phrase": "Find elements satisfying a row condition and a column condition—precompute row min and col max, intersect. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "row_min = min of each row. col_max = max of each col. For each cell, check if matrix[i][j] == row_min[i] == col_max[j]. Time: **O(m*n)**. Space: **O(m+n)**."
+  },
+  {
+    "number": 146,
+    "title": "Cyclic Sort",
+    "problem_statement": "Sort an array containing numbers from 1 to n using O(n) time and O(1) space.",
+    "pattern_explanation": "Each number nums[i] belongs at index nums[i]-1. Swap until every element is in its correct place. This is the foundation of finding missing, duplicate, or misplaced numbers in 1-to-n ranges.",
+    "trigger_phrase": "Array of 1 to n needing O(1) space sort—cyclic swap to correct index. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "For each i, while nums[i] != nums[nums[i]-1], swap nums[i] with nums[nums[i]-1]. After loop, each element is at its correct position or duplicates are revealed. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 147,
+    "title": "Find All Duplicates in an Array",
+    "problem_statement": "In an array where 1 <= nums[i] <= n and each element appears once or twice, find all elements that appear twice.",
+    "pattern_explanation": "Use the sign of elements as a visited marker. For each value v, negate nums[v-1]. If nums[v-1] is already negative, v has been seen before—it is a duplicate.",
+    "trigger_phrase": "Find duplicates in 1-to-n array without extra space—negate at index as a visit flag. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "For each element, let idx = abs(nums[i]) - 1. If nums[idx] < 0, idx+1 is a duplicate—record it. Otherwise negate nums[idx]. Time: **O(n)**. Space: **O(1)** (excluding output)."
+  },
+  {
+    "number": 148,
+    "title": "Set Mismatch",
+    "problem_statement": "In an array of n elements supposed to contain 1 to n, one number is replaced by a duplicate. Find the duplicate and the missing number.",
+    "pattern_explanation": "Cyclic sort places each number at its correct index. A mismatch after sorting reveals both the duplicate (the value at the wrong index) and the missing number (the expected value at that index).",
+    "trigger_phrase": "Find one duplicate and one missing in a 1-to-n array—cyclic sort then scan for mismatch. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Cyclic sort. Scan: where nums[i] != i+1, the duplicate is nums[i] and the missing is i+1. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 149,
+    "title": "Reverse Words in a String",
+    "problem_statement": "Given a string, reverse the order of its words, removing extra spaces.",
+    "pattern_explanation": "Split on whitespace to get words, then reverse the list and rejoin. In-place solutions use a two-pass technique: reverse the whole string, then reverse each word individually.",
+    "trigger_phrase": "Reverse word order—split-reverse-join or two-pass in-place: reverse all, reverse each word. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Split on whitespace (handles multiple spaces). Reverse the list. Join with single space. In-place: reverse entire array, then reverse each word between spaces. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 150,
+    "title": "Reverse Vowels of a String",
+    "problem_statement": "Reverse only the vowels in a string, keeping consonants in place.",
+    "pattern_explanation": "Two pointers moving inward, but swapping only when both point at vowels. Skip consonants by advancing the respective pointer.",
+    "trigger_phrase": "Swap only specific characters in-place—two pointers with a skip condition for non-matching characters. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Convert to list. left=0, right=n-1. Advance left until vowel, retreat right until vowel, swap, advance both. Continue until left >= right. Time: **O(n)**. Space: **O(n)** for char list."
+  },
+  {
+    "number": 151,
+    "title": "First Unique Character in a String",
+    "problem_statement": "Return the index of the first non-repeating character, or -1 if none exists.",
+    "pattern_explanation": "Two-pass frequency count: first pass builds a frequency map, second pass finds the first character with frequency 1.",
+    "trigger_phrase": "First unique element—frequency count then linear scan for frequency-1 entries. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Count character frequencies in a map. Scan the string again; return index of first character with count 1. Time: **O(n)**. Space: **O(1)** (bounded alphabet)."
+  },
+  {
+    "number": 152,
+    "title": "Ransom Note",
+    "problem_statement": "Determine if a ransom note can be constructed using letters from a magazine.",
+    "pattern_explanation": "Frequency subtraction: build the magazine's character count, then subtract for each letter in the note. If any count goes negative, the note cannot be constructed.",
+    "trigger_phrase": "Can target be built from source characters—frequency map subtraction check. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Count magazine characters. For each character in note, decrement count; if it reaches below 0 return false. Time: **O(m+n)**. Space: **O(1)** (bounded alphabet)."
+  },
+  {
+    "number": 153,
+    "title": "Isomorphic Strings",
+    "problem_statement": "Determine if two strings are isomorphic (characters map one-to-one preserving order).",
+    "pattern_explanation": "Two hashmaps enforce a bijection: s->t and t->s. For each position, check that existing mappings are consistent.",
+    "trigger_phrase": "Character bijection check—two-way hashmap to enforce one-to-one mapping. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Iterate characters pairwise. For each (cs, ct): if cs is mapped, check it maps to ct; if ct is mapped back, check it maps to cs. Otherwise add both mappings. Time: **O(n)**. Space: **O(1)** (bounded alphabet)."
+  },
+  {
+    "number": 154,
+    "title": "Word Pattern",
+    "problem_statement": "Check if a pattern string matches a list of words following the same bijection.",
+    "pattern_explanation": "Same bijection-enforcement pattern as isomorphic strings but between pattern characters and space-separated words. Two maps: pattern->word and word->pattern.",
+    "trigger_phrase": "Pattern-to-word bijection check—same isomorphism pattern with a word map. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Split string into words. If length mismatch, return false. Maintain char->word and word->char maps. For each pair, check both mappings are consistent. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 155,
+    "title": "Count and Say",
+    "problem_statement": "Generate the nth term of the count-and-say sequence.",
+    "pattern_explanation": "Iterative simulation: start from '1' and repeatedly encode the current string by grouping consecutive identical digits and replacing each group with count + digit.",
+    "trigger_phrase": "Iterative string transformation—run-length encode the previous term repeatedly. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Start with result='1'. Repeat n-1 times: scan result, group consecutive identical characters, build next string as count+character for each group. Time: **O(n * max_length)**. Space: **O(max_length)**."
+  },
+  {
+    "number": 156,
+    "title": "Zigzag Conversion",
+    "problem_statement": "Write a string in a zigzag pattern on numRows rows and read row by row.",
+    "pattern_explanation": "Simulate by maintaining one list per row and a direction flag. Characters are distributed in a down-then-up zigzag order, reversing direction at row 0 and the last row.",
+    "trigger_phrase": "Zigzag distribution to rows—simulate with per-row buffers and direction toggle. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Create numRows lists. Track current_row and direction. Append each character to current_row's list. Reverse direction at row 0 and numRows-1. Join all rows. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 157,
+    "title": "Roman to Integer",
+    "problem_statement": "Convert a Roman numeral string to an integer.",
+    "pattern_explanation": "Map each symbol to its value. Scan left to right: if the current value is less than the next, subtract it; otherwise add it. This handles subtractive pairs naturally.",
+    "trigger_phrase": "Roman numeral parsing—compare current and next value to decide addition or subtraction. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Build symbol-to-value map. Scan: for each i, if val[i] < val[i+1], subtract val[i]; else add val[i]. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 158,
+    "title": "Integer to Roman",
+    "problem_statement": "Convert an integer to a Roman numeral string.",
+    "pattern_explanation": "Greedy subtraction from a descending list of value-symbol pairs. Repeatedly subtract the largest fitting value and append its symbol.",
+    "trigger_phrase": "Encode integer as Roman numeral—greedy subtraction from largest symbol down. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Create ordered list of (value, symbol) pairs descending. For each pair, append symbol while num >= value and subtract. Time: **O(1)** (bounded input range). Space: **O(1)**."
+  },
+  {
+    "number": 159,
+    "title": "Add Binary",
+    "problem_statement": "Add two binary strings and return the sum as a binary string.",
+    "pattern_explanation": "Digit-by-digit simulation from the right with a carry variable. This generalizes to any base and is the core of big-integer addition.",
+    "trigger_phrase": "Add two strings digit by digit in a given base—right-to-left simulation with carry. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Two pointers from the right. At each step, add digits (0 or 1) plus carry. Append digit = sum % 2, carry = sum // 2. Continue while either pointer or carry remains. Reverse result. Time: **O(max(m,n))**. Space: **O(max(m,n))**."
+  },
+  {
+    "number": 160,
+    "title": "Multiply Strings",
+    "problem_statement": "Multiply two non-negative integers represented as strings, returning the product as a string.",
+    "pattern_explanation": "School multiplication: the digit at positions i and j contribute to positions i+j and i+j+1 of the result. A result array of length m+n accumulates all partial products.",
+    "trigger_phrase": "String multiplication—positional digit products accumulate into a result array. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Create result array of size m+n. For each pair (i, j) from the right, add num1[i]*num2[j] to result[i+j+1]; propagate carry to result[i+j]. Convert non-zero result array to string, strip leading zeros. Time: **O(m*n)**. Space: **O(m+n)**."
+  },
+  {
+    "number": 161,
+    "title": "Implement strStr() / Needle in Haystack",
+    "problem_statement": "Find the first occurrence of a needle string in a haystack string.",
+    "pattern_explanation": "KMP preprocessing builds a failure function that lets the pattern pointer never move backward, achieving O(n+m) time. The failure function encodes the longest proper prefix that is also a suffix at each position.",
+    "trigger_phrase": "Substring search in linear time—KMP failure function eliminates redundant comparisons. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Build KMP failure array for needle. Scan haystack: on mismatch, use failure array to reposition needle pointer without resetting haystack pointer. Time: **O(n+m)**. Space: **O(m)**."
+  },
+  {
+    "number": 162,
+    "title": "Repeated Substring Pattern",
+    "problem_statement": "Check if a string can be constructed by repeating one of its substrings.",
+    "pattern_explanation": "If s is formed by repeating substring t, then s+s has s starting at index len(t). Equivalently, removing the first and last character of s+s still contains s.",
+    "trigger_phrase": "Repeated pattern detection—check if s appears in (s+s) after removing first and last characters. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Check if s is a substring of (s+s)[1:-1]. Alternatively, use KMP failure table: if n % (n - last_fail) == 0, the pattern repeats. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 163,
+    "title": "Minimum Number of Steps to Make Two Strings Anagram",
+    "problem_statement": "Find the minimum number of character replacements to make two strings anagrams.",
+    "pattern_explanation": "Count character differences. The number of replacements equals the sum of positive differences in character frequencies.",
+    "trigger_phrase": "Make two strings anagrams with minimum replacements—frequency difference sum. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Count frequency of each character in both strings. Sum max(0, freq1[c] - freq2[c]) over all characters. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 164,
+    "title": "Maximum Number of Occurrences of a Substring",
+    "problem_statement": "Find the maximum number of occurrences of any substring of length in [min_size, max_size] with at most max_letters distinct characters.",
+    "pattern_explanation": "Any substring of length max_size that appears multiple times must also have its length-min_size prefix appearing at least as many times. So it suffices to only check length-min_size substrings.",
+    "trigger_phrase": "Max occurrences of bounded-length, bounded-distinct substrings—only checking minimum-length windows suffices. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Use a sliding window of exactly min_size. Count distinct chars inside. If <= max_letters, record in a frequency map. Return max frequency. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 165,
+    "title": "Shortest Palindrome",
+    "problem_statement": "Find the shortest palindrome that can be formed by adding characters only to the front of a given string.",
+    "pattern_explanation": "Find the longest palindromic prefix. The answer is the reverse of the suffix beyond that prefix, prepended to s. KMP on s + '#' + reverse(s) finds the longest palindromic prefix efficiently.",
+    "trigger_phrase": "Shortest palindrome by prepending—find longest palindromic prefix via KMP on s+rev(s). The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Concatenate s + '#' + reverse(s). Build KMP failure array. The last value gives the length of the longest palindromic prefix. Prepend reverse(s[last_fail:]) to s. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 166,
+    "title": "Palindrome Partitioning",
+    "problem_statement": "Return all possible ways to partition a string such that every substring is a palindrome.",
+    "pattern_explanation": "Backtracking with palindrome precomputation. Precompute a 2D is_palindrome table in O(n^2) using DP. Then backtracking explores all splits, pruning on non-palindrome prefixes.",
+    "trigger_phrase": "All palindrome partitions—backtrack with precomputed palindrome table for O(1) checks. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Precompute is_palindrome[i][j] with DP. Backtrack: at each position, try all palindromic prefixes, recurse on remaining. Time: **O(n*2^n)**. Space: **O(n^2)**."
+  },
+  {
+    "number": 167,
+    "title": "Minimum Cuts for Palindrome Partitioning",
+    "problem_statement": "Find the minimum number of cuts to partition a string into palindromic substrings.",
+    "pattern_explanation": "1D DP where dp[i] = minimum cuts for s[:i]. For each end position, try all palindromic substrings ending there (precomputed) and update dp[i] from dp[j] + 1.",
+    "trigger_phrase": "Minimum palindrome partition cuts—1D DP with precomputed palindrome ranges. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Precompute is_palindrome. dp[0] = -1. For i from 1 to n: dp[i] = min(dp[j] + 1) for all j where s[j:i] is palindrome. Time: **O(n^2)**. Space: **O(n^2)**."
+  },
+  {
+    "number": 168,
+    "title": "Longest Palindrome by Concatenating Two Letter Words",
+    "problem_statement": "Given an array of two-letter words, find the maximum palindrome length by concatenating words.",
+    "pattern_explanation": "Pair words that are reverses of each other to form outer segments. Self-palindromic words (like 'aa', 'cc') can appear in pairs or one in the center. Use a frequency map to count valid pairs.",
+    "trigger_phrase": "Build palindrome from two-letter words—pair reverses for outer layers, self-palindromes for center. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Frequency map of words. For each word w, if reverse(w) != w and in map, pair them (add 4 per pair). For self-palindromes, use pairs of 2 (add 4 each), one can go center (add 2). Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 169,
+    "title": "Score of Parentheses",
+    "problem_statement": "Compute the score of a balanced parentheses string where '()' = 1, concatenation adds scores, and outer wrapping doubles.",
+    "pattern_explanation": "Stack-based evaluation: push 0 for each '('. On ')', pop the inner value; if it was 0 (empty pair), the score is 1; else double it, and add to the level below.",
+    "trigger_phrase": "Evaluate nested parentheses score—stack where each level accumulates its total. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Stack = [0]. On '(', push 0. On ')', pop v; if v==0, add 1 to new top; else add 2*v to new top. Return stack[0]. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 170,
+    "title": "Check if a Parentheses String Can Be Valid",
+    "problem_statement": "Given a parenthesis string where some characters are locked and others are wildcards, determine if it can be a valid parenthesization.",
+    "pattern_explanation": "Track a range [lo, hi] of possible open-bracket counts after each character. Wildcards can either open or close. Clamp lo to non-negative. If hi < 0, invalid. If lo reaches 0 by end, valid.",
+    "trigger_phrase": "Parenthesis validity with wildcard characters—track range of possible open counts. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Maintain lo and hi as minimum and maximum possible open counts. For '(', both increase. For ')', both decrease. For '*', lo decreases and hi increases. Clamp lo to 0. If hi < 0, return false. Return lo == 0 at end. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 171,
+    "title": "Minimum Window Subsequence",
+    "problem_statement": "Find the minimum window in s that contains t as a subsequence.",
+    "pattern_explanation": "Two-pass scan per candidate: forward pass finds where t ends in s; backward pass from that endpoint finds the shortest window start. Slide and repeat.",
+    "trigger_phrase": "Minimum window containing a subsequence—forward-backward two-pointer pair per candidate window. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "For each starting position in s matching t[0], scan forward to complete t. Then scan backward from end to shorten. Record minimum window. Slide start and repeat. Time: **O(|s|*|t|)**. Space: **O(1)**."
+  },
+  {
+    "number": 172,
+    "title": "Longest Common Subsequence",
+    "problem_statement": "Find the length of the longest subsequence common to two strings.",
+    "pattern_explanation": "Classic 2D DP: dp[i][j] = LCS of text1[:i] and text2[:j]. If characters match, extend diagonal; otherwise take the best of top or left.",
+    "trigger_phrase": "Common subsequence of two strings—2D DP with diagonal extension on character match. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[i][j] = dp[i-1][j-1]+1 if chars match, else max(dp[i-1][j], dp[i][j-1]). Time: **O(m*n)**. Space: **O(m*n)** or **O(min(m,n))** with row optimization."
+  },
+  {
+    "number": 173,
+    "title": "Shortest Common Supersequence",
+    "problem_statement": "Find the shortest string that has both s1 and s2 as subsequences.",
+    "pattern_explanation": "Build the LCS. The supersequence interleaves s1 and s2, sharing the LCS characters once. Reconstruct by walking the LCS DP table.",
+    "trigger_phrase": "Shortest supersequence containing both strings—build LCS then reconstruct via DP table backtrack. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Compute LCS DP table. Backtrack: when chars match, include once; otherwise include the character from whichever string moves. Remaining characters of either string are appended. Time: **O(m*n)**. Space: **O(m*n)**."
+  },
+  {
+    "number": 174,
+    "title": "Distinct Subsequences",
+    "problem_statement": "Count the number of distinct subsequences of s that equal t.",
+    "pattern_explanation": "dp[i][j] = number of ways to form t[:j] using s[:i]. If s[i-1] == t[j-1], extend from dp[i-1][j-1] (use) plus dp[i-1][j] (skip). Otherwise carry dp[i-1][j] forward.",
+    "trigger_phrase": "Count ways a subsequence of s equals t—2D DP with use/skip choice on character match. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[i][j] = dp[i-1][j] + (dp[i-1][j-1] if s[i-1]==t[j-1]). Base: dp[i][0]=1. Answer: dp[m][n]. Time: **O(m*n)**. Space: **O(m*n)**."
+  },
+  {
+    "number": 175,
+    "title": "Interleaving String",
+    "problem_statement": "Determine if s3 is formed by interleaving s1 and s2 while preserving their character order.",
+    "pattern_explanation": "2D DP: dp[i][j] is true if s3[:i+j] can be formed from s1[:i] and s2[:j]. Transition uses the last character of s3 matching either s1 or s2.",
+    "trigger_phrase": "Interleaved string validity—2D DP over prefixes of both source strings. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[i][j] = (dp[i-1][j] and s1[i-1]==s3[i+j-1]) or (dp[i][j-1] and s2[j-1]==s3[i+j-1]). Base: dp[0][0]=True. Time: **O(m*n)**. Space: **O(m*n)**."
+  },
+  {
+    "number": 176,
+    "title": "Regular Expression Matching",
+    "problem_statement": "Implement regular expression matching with '.' matching any character and '*' matching zero or more of the preceding element.",
+    "pattern_explanation": "2D DP: dp[i][j] = does pattern[:j] match string[:i]. Handle '.' as a wildcard and '*' as zero occurrences (skip two in pattern) or one-or-more occurrences (consume one in string).",
+    "trigger_phrase": "Regex matching with dot and star—2D DP with special handling for '*' zero/multiple case. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[i][j] True if: p[j-1] is '*': dp[i][j-2] (zero occurrences) or (dp[i-1][j] and match(s[i-1], p[j-2])). Else: dp[i-1][j-1] and match(s[i-1], p[j-1]). Time: **O(m*n)**. Space: **O(m*n)**."
+  },
+  {
+    "number": 177,
+    "title": "Wildcard Matching",
+    "problem_statement": "Implement wildcard matching where '?' matches any single character and '*' matches any sequence including empty.",
+    "pattern_explanation": "2D DP similar to regex but '*' in wildcard matches any sequence in one step. '*' can match zero characters (skip '*' in pattern) or consume one character in string and keep '*' active.",
+    "trigger_phrase": "Wildcard pattern matching—2D DP where '*' can match any sequence. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[i][j] = if p[j-1]=='*': dp[i-1][j] or dp[i][j-1]. Else: dp[i-1][j-1] and (p[j-1]=='?' or s[i-1]==p[j-1]). Base: dp[0][0]=True, dp[0][j]=True if all p[:j] are '*'. Time: **O(m*n)**. Space: **O(m*n)**."
+  },
+  {
+    "number": 178,
+    "title": "Minimum Deletions to Make String Balanced",
+    "problem_statement": "Find the minimum number of deletions to make a string of 'a' and 'b' such that all a's come before all b's.",
+    "pattern_explanation": "For each potential split point, the cost is the number of 'b's on the left plus the number of 'a's on the right. A single scan tracking these counts minimizes the split point.",
+    "trigger_phrase": "Minimum deletions for a prefix-a suffix-b arrangement—scan tracking left-b and right-a counts. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Start with right_a = total 'a' count. Scan left to right: update left_b (increment on 'b') and right_a (decrement on 'a'). At each position, min cost = min(left_b + right_a). Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 179,
+    "title": "Decode Ways",
+    "problem_statement": "Count the number of ways to decode a numeric string into letters where 'A'=1, ..., 'Z'=26.",
+    "pattern_explanation": "1D DP: dp[i] = number of ways to decode s[:i]. A single digit d adds dp[i-1] if d != '0'. A two-digit number formed by s[i-2:i] adds dp[i-2] if the number is in [10, 26].",
+    "trigger_phrase": "Count string decoding ways—1D DP checking single-digit and two-digit validity at each position. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[0]=1, dp[1]=1 if s[0]!='0' else 0. For i>=2: if s[i-1]!='0' add dp[i-1]; if 10<=int(s[i-2:i])<=26 add dp[i-2]. Time: **O(n)**. Space: **O(1)** with two variables."
+  },
+  {
+    "number": 180,
+    "title": "Text Justification",
+    "problem_statement": "Format words into lines of exactly maxWidth characters with full justification.",
+    "pattern_explanation": "Greedy packing: fill each line with as many words as fit. For interior lines, distribute spaces evenly using division and modulo (extra spaces go left). Last line is left-justified.",
+    "trigger_phrase": "Text justification—greedy word packing then even space distribution per line. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Pack words greedily. For each complete line: total_spaces = maxWidth - sum_word_lengths. Gaps = num_words - 1. Base = total_spaces // gaps, extra = total_spaces % gaps. First 'extra' gaps get one more space. Last line: single-space words, pad right. Time: **O(total chars)**. Space: **O(maxWidth)**."
+  },
+  {
+    "number": 181,
+    "title": "Basic Calculator I",
+    "problem_statement": "Evaluate a string expression containing +, -, (, ) and non-negative integers.",
+    "pattern_explanation": "Stack-based evaluation. When '(' is encountered, push current result and sign; when ')' closes, pop and merge. Process digits and signs in a linear scan.",
+    "trigger_phrase": "Expression with parentheses and +/- only—stack to save state at each '(' and restore at ')'. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Maintain result, sign, and num. On digit, build num. On '+'/'-', add signed num to result, reset. On '(', push result and sign, reset. On ')', add signed num, then apply popped sign and result. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 182,
+    "title": "Evaluate Reverse Polish Notation",
+    "problem_statement": "Evaluate the value of a postfix (Reverse Polish Notation) expression.",
+    "pattern_explanation": "Stack-based postfix evaluation. Push operands; on operator, pop two operands, apply, and push result. This is the canonical stack expression evaluation pattern.",
+    "trigger_phrase": "Postfix expression evaluation—push operands, pop and apply on each operator. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "For each token: if number, push. If operator, pop two, compute, push result. Return stack top. Integer division truncates toward zero. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 183,
+    "title": "Simplify Path",
+    "problem_statement": "Simplify a Unix absolute file path to its canonical form.",
+    "pattern_explanation": "Split on '/'. Use a stack: '.' does nothing, '..' pops, empty string does nothing, anything else pushes the directory name. Join the stack with '/' prefix.",
+    "trigger_phrase": "Unix path simplification—stack with '.' no-op, '..' pop, name push. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Split path by '/'. For each part: if '' or '.', skip; if '..', pop from stack if non-empty; else push. Join with '/' and prepend '/'. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 184,
+    "title": "Number of Enclaves",
+    "problem_statement": "Count land cells that cannot walk off the boundary of the grid.",
+    "pattern_explanation": "Flood-fill from all boundary land cells first, marking them. Any remaining unmarked land cell is an enclave—it has no path to the boundary.",
+    "trigger_phrase": "Land cells not reachable from the boundary—flood-fill from boundaries, count unmarked. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "BFS/DFS from all boundary '1' cells, marking visited. Count remaining '1' cells not visited. Time: **O(rows*cols)**. Space: **O(rows*cols)**."
+  },
+  {
+    "number": 185,
+    "title": "Count Sub Islands",
+    "problem_statement": "Count islands in grid2 that are entirely contained within an island in grid1.",
+    "pattern_explanation": "Flood-fill each island in grid2. While doing so, check every cell—if grid1 has 0 at a cell that is 1 in grid2, the island is not a sub-island. The flood-fill must complete regardless to avoid recounting.",
+    "trigger_phrase": "Count islands in one grid contained in another—flood-fill both grids simultaneously, track containment. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "DFS each unvisited '1' in grid2. During DFS, if grid1[r][c]==0, mark sub_island=false but continue. If sub_island remains true after DFS, increment count. Time: **O(rows*cols)**. Space: **O(rows*cols)**."
+  },
+  {
+    "number": 186,
+    "title": "Making a Large Island",
+    "problem_statement": "Flip at most one 0 to 1 to maximise the island size.",
+    "pattern_explanation": "Two-pass approach: first label each island with a unique ID and store its size. Then for each 0 cell, sum the sizes of distinct adjacent islands plus 1 to find the best flip.",
+    "trigger_phrase": "Optimal single 0-to-1 flip for largest island—label islands, then for each 0 sum distinct adjacent island sizes. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "DFS to label each island with an ID (starting at 2) and compute its size in a map. For each 0 cell, collect adjacent island IDs (unique), sum sizes + 1. Track maximum. Handle all-ones case. Time: **O(rows*cols)**. Space: **O(rows*cols)**."
+  },
+  {
+    "number": 187,
+    "title": "Snakes and Ladders",
+    "problem_statement": "Find the minimum number of moves to reach the end of a snakes-and-ladders board.",
+    "pattern_explanation": "BFS on the board, treating each position as a node. The label-to-coordinate mapping converts linear position to (row, col) accounting for the boustrophedon numbering. Snakes and ladders are automatic teleports.",
+    "trigger_phrase": "Shortest path on a board with teleports—BFS with position-to-coordinate conversion. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Map board number to (row, col) with correct boustrophedon formula. BFS from 1, rolling die 1-6 per step. If board[r][c] != -1, jump to that value. Track visited. Return steps when n^2 is reached. Time: **O(n^2)**. Space: **O(n^2)**."
+  },
+  {
+    "number": 188,
+    "title": "Minimum Knight Moves",
+    "problem_statement": "Find the minimum number of knight moves to reach a target from (0,0) on an infinite chessboard.",
+    "pattern_explanation": "BFS from the source to the target. By symmetry, reflect target to the first quadrant to reduce the search space. BFS in a bounded region (target + small buffer) suffices.",
+    "trigger_phrase": "Minimum moves on chessboard with specific movement—BFS from source, symmetry to reduce quadrant. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Exploit 8-fold symmetry: work with abs(x), abs(y). BFS from (0,0) with all 8 knight moves. Visited set prevents revisits. Stop when target is reached. Time: **O(max(|x|,|y|)^2)**. Space: same."
+  },
+  {
+    "number": 189,
+    "title": "Minimum Cost to Make at Least One Valid Path in a Grid",
+    "problem_statement": "Each cell has a direction; find minimum cost to reach bottom-right where cost = number of direction changes.",
+    "pattern_explanation": "0-1 BFS (deque): moving in the cell's directed direction costs 0; moving against it costs 1. Edges of weight 0 are prepended to the deque, edges of weight 1 are appended.",
+    "trigger_phrase": "Minimum modifications to reach target in directed grid—0-1 BFS with deque, cost 0 on direction, cost 1 against. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "0-1 BFS from (0,0). For each cell, expand in all 4 directions: cost 0 if direction arrow matches, cost 1 otherwise. Use deque: cost-0 to front, cost-1 to back. dist matrix tracks minimum cost. Return dist[m-1][n-1]. Time: **O(m*n)**. Space: **O(m*n)**."
+  },
+  {
+    "number": 190,
+    "title": "Minimum Steps in Infinite Grid",
+    "problem_statement": "Given a sequence of positions to visit in order on an infinite grid, find the total minimum steps (Chebyshev distance).",
+    "pattern_explanation": "Chebyshev distance between two points equals max(|dx|, |dy|) since diagonal movement covers both axes simultaneously. Sum this over consecutive pairs.",
+    "trigger_phrase": "Grid traversal with diagonal moves—Chebyshev distance = max(|dx|, |dy|) per step. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "For each consecutive pair (x1,y1) and (x2,y2), add max(abs(x2-x1), abs(y2-y1)) to total. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 191,
+    "title": "Triangle",
+    "problem_statement": "Find the minimum path sum from top to bottom of a triangle, moving to adjacent numbers on the row below.",
+    "pattern_explanation": "Bottom-up DP: start from the second-to-last row and move up, updating each cell with the minimum of its two children plus itself. The result is the top cell.",
+    "trigger_phrase": "Minimum path in a triangle—bottom-up DP updating each row from children. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Copy last row into dp. For each row from n-2 to 0, dp[j] = triangle[row][j] + min(dp[j], dp[j+1]). Return dp[0]. Time: **O(n^2)**. Space: **O(n)**."
+  },
+  {
+    "number": 192,
+    "title": "Dungeon Game",
+    "problem_statement": "Find the minimum initial health a knight needs to rescue the princess, given a dungeon grid with health-modifying cells.",
+    "pattern_explanation": "Bottom-up DP working right-to-left and bottom-to-top. dp[i][j] = minimum health needed entering cell (i,j). Working backward avoids the complication that health must stay positive.",
+    "trigger_phrase": "Minimum starting resource for a path with minimum-positive constraint—right-to-bottom DP worked backward. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[m-1][n-1] = max(1, 1 - dungeon[m-1][n-1]). Fill last row and last col. For each cell: need = min(dp[i+1][j], dp[i][j+1]) - dungeon[i][j]; dp[i][j] = max(1, need). Return dp[0][0]. Time: **O(m*n)**. Space: **O(m*n)**."
+  },
+  {
+    "number": 193,
+    "title": "Cherry Pickup",
+    "problem_statement": "Collect the maximum cherries by going from top-left to bottom-right and back, not reusing cells.",
+    "pattern_explanation": "Equivalent to two simultaneous paths from top-left to bottom-right. 3D DP on (step, col1, col2) since rows can be inferred. Handle overlap where both paths share a cell.",
+    "trigger_phrase": "Two simultaneous paths maximising collection without double-counting—3D DP on step and two column positions. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[r1][c1][c2] = max cherries with person 1 at (r1,c1) and person 2 at (r1, c2). Transition: try all four movement combinations. Cherries = grid[r1][c1] + (grid[r2][c2] if c1!=c2 else 0). Time: **O(n^3)**. Space: **O(n^2)**."
+  },
+  {
+    "number": 194,
+    "title": "Paint House",
+    "problem_statement": "Paint n houses with 3 colors so no two adjacent houses share the same color; minimise total cost.",
+    "pattern_explanation": "DP where dp[i][c] = minimum cost to paint houses 0..i with house i painted color c. Transition takes the minimum over the two other colors for the previous house.",
+    "trigger_phrase": "Minimum cost coloring with no-adjacent-same constraint—DP over colors per house. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[0] = costs[0]. For each house i: dp[i][0] = costs[i][0] + min(dp[i-1][1], dp[i-1][2]) and similarly for other colors. Return min(dp[n-1]). Time: **O(n)**. Space: **O(1)** with rolling variables."
+  },
+  {
+    "number": 195,
+    "title": "Maximal Square",
+    "problem_statement": "Find the largest square containing only 1s in a binary matrix and return its area.",
+    "pattern_explanation": "dp[i][j] = side length of the largest all-1s square with its bottom-right corner at (i,j). It equals min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]) + 1 when matrix[i][j] == '1'. Area is max dp squared.",
+    "trigger_phrase": "Largest all-1s square—DP where each cell stores the side of the largest square ending there. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[i][j] = 0 if matrix[i][j]=='0'. Else dp[i][j] = min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]) + 1. Track max dp value; return max^2. Time: **O(m*n)**. Space: **O(n)** with rolling row."
+  },
+  {
+    "number": 196,
+    "title": "Minimum Falling Path Sum",
+    "problem_statement": "Find the minimum sum of any falling path through a matrix where each step moves to an adjacent or same column in the next row.",
+    "pattern_explanation": "Row-by-row DP. For each cell in the current row, the minimum falling sum is the cell's value plus the minimum of the three cells directly above it.",
+    "trigger_phrase": "Minimum path descending through a matrix with adjacent column moves—row-by-row DP. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp = first row. For each subsequent row, new_dp[j] = matrix[row][j] + min(dp[j-1] if j>0, dp[j], dp[j+1] if j<n-1). Update dp. Return min(dp). Time: **O(m*n)**. Space: **O(n)**."
+  },
+  {
+    "number": 197,
+    "title": "Best Time to Buy and Sell Stock",
+    "problem_statement": "Find the maximum profit from one buy and one sell of a stock given daily prices.",
+    "pattern_explanation": "Track the minimum price seen so far. For each price, the maximum profit using that price as the sell day is price - min_so_far. A single pass suffices.",
+    "trigger_phrase": "Single transaction profit maximisation—track minimum so far and compute profit at each sell candidate. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "min_price = infinity, max_profit = 0. For each price: max_profit = max(max_profit, price - min_price); min_price = min(min_price, price). Return max_profit. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 198,
+    "title": "Best Time to Buy and Sell Stock II",
+    "problem_statement": "Find the maximum profit with unlimited transactions but only one stock held at a time.",
+    "pattern_explanation": "Greedy: capture every upward price increment. Since you can trade daily, any positive difference prices[i+1] - prices[i] is profit you can capture.",
+    "trigger_phrase": "Unlimited stock transactions—greedy: sum all positive day-over-day increments. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Sum max(0, prices[i+1] - prices[i]) for all consecutive pairs. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 199,
+    "title": "Best Time to Buy and Sell Stock with Cooldown",
+    "problem_statement": "Maximise profit with unlimited transactions and a mandatory one-day cooldown after selling.",
+    "pattern_explanation": "State machine DP with three states—held (holding stock), sold (just sold, in cooldown), rest (not holding, not cooling). Transitions encode the cooldown constraint explicitly.",
+    "trigger_phrase": "Stock trading with cooldown—state machine DP with held/sold/rest states. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "held = max(prev_held, prev_rest - price); sold = prev_held + price; rest = max(prev_rest, prev_sold). Initialise held=-prices[0], sold=rest=0. Return max(sold, rest). Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 200,
+    "title": "Best Time to Buy and Sell Stock with Transaction Fee",
+    "problem_statement": "Maximise profit with unlimited transactions but a fee per transaction.",
+    "pattern_explanation": "Two-state DP: cash (not holding) and hold (holding). On each day, cash = max(cash, hold + price - fee); hold = max(hold, cash - price). The fee is subtracted on sell.",
+    "trigger_phrase": "Stock unlimited transactions with fee—two-state DP: cash and hold, fee deducted on sell. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "cash=0, hold=-prices[0]. For each price: new_cash = max(cash, hold+price-fee); new_hold = max(hold, cash-price). Update. Return cash. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 201,
+    "title": "Best Time to Buy and Sell Stock III",
+    "problem_statement": "Find the maximum profit with at most 2 transactions.",
+    "pattern_explanation": "Track four state variables: buy1, sell1, buy2, sell2. Each represents the optimal value after that particular action. Transitions update all four in a single pass.",
+    "trigger_phrase": "At most k=2 stock transactions—track state per transaction in one pass. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "buy1 = buy2 = -inf; sell1 = sell2 = 0. For each price: buy1 = max(buy1, -price); sell1 = max(sell1, buy1+price); buy2 = max(buy2, sell1-price); sell2 = max(sell2, buy2+price). Return sell2. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 202,
+    "title": "Maximum Profit in Job Scheduling",
+    "problem_statement": "Schedule non-overlapping jobs (with start time, end time, profit) to maximise total profit.",
+    "pattern_explanation": "Sort jobs by end time. dp[i] = max profit using only the first i jobs. For each job, binary search for the latest non-overlapping job. Transition: max(skip, profit[i] + dp[prev_job]).",
+    "trigger_phrase": "Maximum profit non-overlapping intervals—sort by end, DP with binary search for latest compatible job. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Sort by end time. dp = [(0,0)]. For each job (start, end, profit): bisect_right on end times to find latest compatible. new_profit = dp[idx][1] + profit. If > dp[-1][1], append (end, new_profit). Time: **O(n log n)**. Space: **O(n)**."
+  },
+  {
+    "number": 203,
+    "title": "Longest Increasing Path in a Matrix",
+    "problem_statement": "Find the length of the longest strictly increasing path in a matrix, moving in 4 directions.",
+    "pattern_explanation": "DFS with memoization on each cell. dp[i][j] = longest increasing path starting at (i,j). Since paths are strictly increasing (forming a DAG), no cycle can exist and memoization is valid.",
+    "trigger_phrase": "Longest increasing path in grid—DFS with memoization; strictly increasing ensures DAG, no cycle. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "For each cell, memoized DFS: try all 4 directions where neighbor > current. dp[i][j] = 1 + max(dp of valid neighbors). Return global max. Time: **O(m*n)**. Space: **O(m*n)**."
+  },
+  {
+    "number": 204,
+    "title": "Number of Islands II",
+    "problem_statement": "Given a sequence of land-adding operations on a grid, return the number of islands after each operation.",
+    "pattern_explanation": "Union-Find (Disjoint Set Union) processes dynamic connectivity efficiently. Each land addition is O(alpha) amortized with path compression. The island count decrements when merging distinct components.",
+    "trigger_phrase": "Dynamic island formation with connectivity tracking—Union-Find with component count. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Union-Find over grid cells. On each land addition: increment island count. For each land neighbor, if different component, union them and decrement count. Record count after each step. Time: **O(k * alpha(m*n))** for k operations. Space: **O(m*n)**."
+  },
+  {
+    "number": 205,
+    "title": "Word Search II",
+    "problem_statement": "Find all words from a dictionary that exist in a board (adjacent cells, no reuse per path).",
+    "pattern_explanation": "Build a Trie of all words. DFS with backtracking on the board; prune branches not in the Trie. This avoids restarting for each word and processes all words simultaneously.",
+    "trigger_phrase": "Find multiple words on a grid—Trie + DFS with backtracking for simultaneous multi-word search. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Insert all words into a Trie. DFS from each cell, traversing Trie nodes simultaneously. When a Trie node marks end-of-word, record the word. Backtrack by restoring cell. Prune Trie nodes after finding words. Time: **O(M*N*4^L)** where L=max word length. Space: **O(total word chars)**."
+  },
+  {
+    "number": 206,
+    "title": "Number of Distinct Islands",
+    "problem_statement": "Count the number of distinct island shapes (islands that would overlap if translated).",
+    "pattern_explanation": "DFS each island and record the path signature relative to the starting cell. Use a set of these relative-position tuples to deduplicate shapes.",
+    "trigger_phrase": "Distinct island shapes—DFS with relative coordinates stored as canonical signature. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "DFS on each unvisited '1'. Record (r - start_r, c - start_c) and direction for each step. Hash the resulting tuple as the island signature. Add to a set. Return set size. Time: **O(rows*cols)**. Space: **O(rows*cols)**."
+  },
+  {
+    "number": 207,
+    "title": "Largest Submatrix With Rearrangements",
+    "problem_statement": "Find the largest area rectangle in a binary matrix if you can rearrange columns in any order.",
+    "pattern_explanation": "Compute column heights (consecutive 1s ending at each row). For each row, sort heights in descending order. The area at rank k is heights[k] * (k+1). No need for a full histogram algorithm.",
+    "trigger_phrase": "Largest rearrangeable rectangle in binary matrix—column heights, sort per row, width = rank. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Build column heights (reset to 0 on '0'). For each row, sort heights descending. Area candidate at index k is heights[k] * (k+1). Track maximum. Time: **O(m*n log n)**. Space: **O(n)**."
+  },
+  {
+    "number": 208,
+    "title": "Find Right Interval",
+    "problem_statement": "For each interval, find the minimum start point of another interval >= the current interval's end.",
+    "pattern_explanation": "Sort intervals by start. For each interval's end, binary search for the smallest start >= end. A sorted map of start->index enables this in O(log n).",
+    "trigger_phrase": "Next interval start >= current end—sort starts, binary search per query. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Build sorted array of (start, index) pairs. For each interval's end, binary search for smallest start >= end. Record result index or -1. Time: **O(n log n)**. Space: **O(n)**."
+  },
+  {
+    "number": 209,
+    "title": "Minimum Interval to Include Each Query",
+    "problem_statement": "For each query point, find the minimum length interval that contains it.",
+    "pattern_explanation": "Sort queries offline. Sort intervals by start. Sweep: add all intervals starting before or at the current query to a min-heap keyed by length. Pop intervals ending before the query. Heap top is the answer.",
+    "trigger_phrase": "Offline query: minimum interval containing each point—sort both, sweep with min-heap of active intervals. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Sort queries with original indices. Sort intervals by start. Min-heap keyed by (length, end). For each query, add all intervals with start <= query; pop expired intervals with end < query. Heap top gives answer. Time: **O((n+q) log n)**. Space: **O(n+q)**."
+  },
+  {
+    "number": 210,
+    "title": "Find K-th Smallest Pair Distance",
+    "problem_statement": "Find the k-th smallest distance among all pairs in an array.",
+    "pattern_explanation": "Binary search on the answer. The feasibility function counts pairs with distance <= mid using a sliding window on the sorted array. This converts an order-statistics problem into binary search.",
+    "trigger_phrase": "K-th smallest pair distance—binary search the distance, count pairs with sliding window. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Sort array. Binary search on distance in [0, max-min]. Count pairs with distance <= mid using two pointers. If count >= k, search lower; else search higher. Time: **O(n log n + n log(max-min))**. Space: **O(1)**."
+  },
+  {
+    "number": 211,
+    "title": "Summary Ranges",
+    "problem_statement": "Given a sorted unique integer array, return the smallest sorted list of ranges that cover all numbers.",
+    "pattern_explanation": "Linear scan tracking the start of the current range. When a gap appears (nums[i] != nums[i-1]+1), close the current range and start a new one.",
+    "trigger_phrase": "Compress consecutive integers into ranges—scan tracking range start, close on gap. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Track start index. Scan: if nums[i] != nums[i-1]+1, append range from nums[start] to nums[i-1], reset start. Append last range. Time: **O(n)**. Space: **O(1)** extra."
+  },
+  {
+    "number": 212,
+    "title": "Arithmetic Slices",
+    "problem_statement": "Count the number of arithmetic subarrays of length at least 3.",
+    "pattern_explanation": "DP: dp[i] = number of arithmetic subarrays ending at i. If the difference matches, dp[i] = dp[i-1] + 1. This counts all valid endings at i efficiently.",
+    "trigger_phrase": "Count arithmetic subarrays—DP extending count when common difference matches. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "dp[i] = 0. For i >= 2: if nums[i]-nums[i-1] == nums[i-1]-nums[i-2], dp[i] = dp[i-1] + 1. Add dp[i] to total. Return total. Time: **O(n)**. Space: **O(1)**."
+  },
+  {
+    "number": 213,
+    "title": "Number of Arithmetic Triplets",
+    "problem_statement": "Count triplets (i, j, k) with i < j < k in a strictly increasing array where nums[j]-nums[i] == nums[k]-nums[j] == diff.",
+    "pattern_explanation": "For each element x, check if x-diff and x-2*diff are in a hashset. A single pass with a growing set suffices because the array is strictly increasing.",
+    "trigger_phrase": "Arithmetic triplet count in sorted array—hashset check for two predecessors per element. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "For each nums[i], if nums[i]-diff and nums[i]-2*diff are both in a set, increment count. Add nums[i] to set. Time: **O(n)**. Space: **O(n)**."
+  },
+  {
+    "number": 214,
+    "title": "Number of Subsequences That Satisfy the Given Sum Condition",
+    "problem_statement": "Count subsequences where min + max <= target.",
+    "pattern_explanation": "Sort the array. Two pointers: for each left (minimum), find the rightmost right (maximum) where nums[left] + nums[right] <= target. All 2^(right-left) subsequences with that min are valid.",
+    "trigger_phrase": "Count subsequences with min+max bound after sorting—two pointers count valid subsequences in O(1). The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+    "detailed_solution": "Sort. Precompute powers of 2 mod 1e9+7. Two pointers l=0, r=n-1. If nums[l]+nums[r] <= target, add pow2[r-l] and advance l. Else retreat r. Time: **O(n log n)**. Space: **O(n)**."
+  }
   ]
 }
