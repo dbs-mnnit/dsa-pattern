@@ -1,0 +1,807 @@
+{
+  "title": "100 Must-Know Array, String, and Grid Problems",
+  "description": "Structured handbook for DSA interview preparation with problem statement, pattern explanation, trigger phrase, and detailed solution.",
+  "total_problems": 100,
+  "problems": [
+    {
+      "number": 1,
+      "title": "Two Sum",
+      "problem_statement": "Given an array and a target, return the indices of two distinct elements whose values sum to the target.",
+      "pattern_explanation": "A hashmap is the right fit when each element’s answer depends on information from earlier elements. It turns repeated searching into constant-time average lookup. In interviews, this is one of the most common ways to collapse an O(n^2) pair-search into O(n).",
+      "trigger_phrase": "When the problem is about finding a pair to hit a target in one pass, look for complements. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Scan once. For each number x, compute target-x and check whether that value already exists in a hashmap from value to index. If it exists, return the stored index and the current index; otherwise store x with its index. Time: **O(n)** average. Space: **O(n)**."
+    },
+    {
+      "number": 2,
+      "title": "Contains Duplicate",
+      "problem_statement": "Given an array, decide whether any value appears at least twice.",
+      "pattern_explanation": "A hash set is the simplest presence-tracking tool. It works when the exact count or order is irrelevant and the core question is simply whether a value has appeared before. This converts repeated membership checks into O(1) average time.",
+      "trigger_phrase": "When the task is only to detect a repeat, the key clue is “have I seen this value before?”. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Maintain a hash set. For each value, check whether it is already in the set. If yes, return true; otherwise insert it and continue. Time: **O(n)** average. Space: **O(n)**."
+    },
+    {
+      "number": 3,
+      "title": "Majority Element",
+      "problem_statement": "Given an array where one value appears more than n/2 times, find that value.",
+      "pattern_explanation": "Boyer-Moore voting is a cancellation pattern. When one element is guaranteed to dominate more than half the array, every mismatch can cancel one occurrence of the majority against one occurrence of a non-majority. The final survivor is the majority candidate.",
+      "trigger_phrase": "The phrase “more than half” should immediately suggest cancellation logic. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use Boyer-Moore voting. Keep a candidate and a counter. If the counter is zero, set the current element as candidate. Increase for a match, decrease for a mismatch. The surviving candidate is the majority. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 4,
+      "title": "Product of Array Except Self",
+      "problem_statement": "For each index, compute the product of all array elements except the one at that index, without using division.",
+      "pattern_explanation": "This pattern decomposes each index’s answer into a left contribution and a right contribution. Instead of recomputing “all elements except self” from scratch, you reuse products accumulated from the left and from the right. That keeps the solution linear.",
+      "trigger_phrase": "If each answer depends on everything to the left and everything to the right, think prefix and suffix contributions. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Build left products in the answer array, then sweep from right with a running suffix product. Multiply left contribution and right contribution for each index. Time: **O(n)**. Space: **O(1)** extra if the output array is reused."
+    },
+    {
+      "number": 5,
+      "title": "Longest Consecutive Sequence",
+      "problem_statement": "Given an unsorted array, find the length of the longest run of consecutive integers.",
+      "pattern_explanation": "This pattern treats the array as an unordered pool and uses a set for O(1) average membership checks. The main trick is to start only from true sequence starts, which prevents re-walking the same consecutive run many times.",
+      "trigger_phrase": "The clue is “consecutive in an unsorted array” without caring about original positions. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Put all values in a set. Only start growing a sequence from numbers whose predecessor is absent. Then extend forward while next values exist. Time: **O(n)** average. Space: **O(n)**."
+    },
+    {
+      "number": 6,
+      "title": "Missing Number",
+      "problem_statement": "Given numbers from 0 to n with one missing, find the missing one.",
+      "pattern_explanation": "When the values should form a full range, either arithmetic sum or XOR compares the ideal world to the actual world. XOR is especially elegant because duplicates cancel out naturally and only the missing value remains.",
+      "trigger_phrase": "When values are a complete range with one missing, compare expected structure with actual structure. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Either compute expected sum and subtract actual sum, or XOR all indices and values so duplicates cancel and the missing value remains. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 7,
+      "title": "Single Number",
+      "problem_statement": "Given an array where every value appears twice except one, find the unique value.",
+      "pattern_explanation": "XOR is powerful when elements appear in pairs. Equal values cancel because x XOR x = 0, so if every pair appears exactly twice, the one unmatched value survives after a full pass.",
+      "trigger_phrase": "The clue is pairwise duplication with exactly one leftover element. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "XOR all numbers. Equal values cancel because x^x=0, so the remaining value is the answer. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 8,
+      "title": "Find the Duplicate Number",
+      "problem_statement": "Given n+1 integers where every value is in [1,n] and exactly one value repeats, find the duplicate without modifying the array.",
+      "pattern_explanation": "This is a special array-as-linked-list trick. Because each value points to another valid index range, repetition creates a cycle. Floyd’s slow-fast pointer method finds the entrance to that cycle without extra memory.",
+      "trigger_phrase": "The constraint about values in [1,n] lets you treat the array like pointers to next indices. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use Floyd cycle detection. Start slow and fast pointers from nums[0], move slow by one jump and fast by two until they meet. Then reset one pointer to start and move both one step; their meeting point is the duplicate. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 9,
+      "title": "First Missing Positive",
+      "problem_statement": "Given an unsorted array, find the smallest missing positive integer in O(n) time and constant extra space.",
+      "pattern_explanation": "When numbers naturally belong to positions in the same array, you can use the array as an in-place hash. The core idea is: value x should ideally sit at index x-1. Incorrect placements reveal missing values.",
+      "trigger_phrase": "The phrase “smallest missing positive” plus an O(n) requirement usually means using the array itself as an index map. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Place each value x, when 1<=x<=n, into index x-1 by swapping until values are either in the right place or invalid. Then scan for the first index i where nums[i] != i+1. Time: **O(n)** amortized. Space: **O(1)** extra."
+    },
+    {
+      "number": 10,
+      "title": "Find All Numbers Disappeared in an Array",
+      "problem_statement": "Given values in [1,n], find which numbers from 1 to n never appear.",
+      "pattern_explanation": "If values are guaranteed to live in a small indexable range like 1..n, the input array itself can record which values were seen. Marking indices avoids extra sets or maps and keeps the algorithm linear.",
+      "trigger_phrase": "If values naturally map to indices, use the array itself to mark presence. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "For each value x, mark index abs(x)-1 as seen by negating the number at that index. Then collect all indices that remain positive. Time: **O(n)**. Space: **O(1)** extra."
+    },
+    {
+      "number": 11,
+      "title": "Top K Frequent Elements",
+      "problem_statement": "Given an array, return the k most frequent values.",
+      "pattern_explanation": "Top-k frequency problems usually split into two phases: count first, then extract the most frequent elements. A heap is flexible and intuitive; bucket sort is faster when frequency bounds are small and known.",
+      "trigger_phrase": "The phrase “top k by frequency” means first count, then use a structure to extract the largest counts. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Build a frequency map. Then either use a max-heap ordered by count or bucket sort by frequency. Extract the k values with highest counts. Time: **O(n log k)** with a heap or **O(n)** with bucket sort. Space: **O(n)**."
+    },
+    {
+      "number": 12,
+      "title": "Contiguous Array",
+      "problem_statement": "Given a binary array, find the longest contiguous subarray with equal numbers of 0 and 1.",
+      "pattern_explanation": "Sometimes the right transformation makes the pattern obvious. Converting 0 to -1 turns “equal number of 0s and 1s” into “subarray sum equals zero,” which is a prefix-sum problem.",
+      "trigger_phrase": "Equal 0s and 1s often becomes a prefix-sum problem after transforming one of them. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Convert 0 to -1 and 1 to +1. Now equal 0s and 1s means subarray sum 0. Store the earliest index of each prefix sum; when a sum repeats, the section between those indices has zero sum. Time: **O(n)**. Space: **O(n)**."
+    },
+    {
+      "number": 13,
+      "title": "Range Sum Query - Immutable",
+      "problem_statement": "Given a fixed array and many sum queries [l,r], answer each query quickly.",
+      "pattern_explanation": "Prefix sums turn repeated contiguous-range sums into constant-time queries after linear preprocessing. The key observation is that a range sum can be represented as the difference of two prefix sums.",
+      "trigger_phrase": "The trigger is repeated range-sum queries on static data. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Precompute prefix sums where prefix[i] is sum of first i elements. Then sum(l,r)=prefix[r+1]-prefix[l]. Preprocessing time: **O(n)**. Query time: **O(1)**. Space: **O(n)**."
+    },
+    {
+      "number": 14,
+      "title": "Subarray Sum Equals K",
+      "problem_statement": "Count the number of subarrays whose sum equals k.",
+      "pattern_explanation": "This is one of the most important interview patterns. Once you compute a running prefix sum, many subarray problems reduce to asking whether a needed earlier prefix already exists. A hashmap stores those earlier prefixes efficiently.",
+      "trigger_phrase": "“Count subarrays” plus “sum equals k” is a classic prefix-plus-hashmap trigger. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Maintain a running prefix sum. For the current prefix S, any earlier prefix S-k forms a subarray summing to k. Count how many times S-k has appeared in a map. Time: **O(n)** average. Space: **O(n)**."
+    },
+    {
+      "number": 15,
+      "title": "Subarrays Divisible by K",
+      "problem_statement": "Count subarrays whose sum is divisible by k.",
+      "pattern_explanation": "Using prefix sums modulo k is the right move when divisibility matters. If two prefix sums have the same remainder, their difference is divisible by k, which reveals a valid subarray.",
+      "trigger_phrase": "The word “divisible” with subarray sums usually means using prefix remainders. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Track running prefix sum modulo k. If two prefixes have the same remainder, their difference is divisible by k. Count frequencies of remainders. Time: **O(n)** average. Space: **O(k)** or **O(n)** depending on storage."
+    },
+    {
+      "number": 16,
+      "title": "Continuous Subarray Sum",
+      "problem_statement": "Check whether there exists a subarray of length at least two whose sum is a multiple of k.",
+      "pattern_explanation": "This variant cares about existence plus a length constraint. Storing the earliest index of each remainder helps detect whether a later match is far enough away to form a valid subarray.",
+      "trigger_phrase": "The requirement is existence plus a length condition, not counting all subarrays. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Store the first index where each prefix remainder appears. When the same remainder appears again and the gap is at least 2, a valid subarray exists. Time: **O(n)** average. Space: **O(min(n, k))**."
+    },
+    {
+      "number": 17,
+      "title": "Pivot Index",
+      "problem_statement": "Find an index where the sum of elements on the left equals the sum on the right.",
+      "pattern_explanation": "This pattern works when each candidate index can be evaluated from total sum and a running left sum. Instead of recomputing left and right parts every time, you maintain one side incrementally and derive the other side instantly.",
+      "trigger_phrase": "The clue is balancing left and right sums around each position. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Compute total sum. Walk left to right with a running left sum. For each index, right sum is total-left-current. Compare left and right. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 18,
+      "title": "Corporate Flight Bookings",
+      "problem_statement": "Given booking operations that add seats to ranges, compute seats booked on each flight.",
+      "pattern_explanation": "A difference array is the reverse of a prefix sum. Instead of applying every range update cell-by-cell, you record only where an update starts and where it stops. One prefix pass reconstructs final values.",
+      "trigger_phrase": "Many range additions with a final reconstruction is the classic difference-array signal. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "For an update [l,r]+=x, add x at l and subtract x after r if it exists. After processing all bookings, take a prefix sum to reconstruct final seat counts. Time: **O(n + q)** for q updates. Space: **O(n)**."
+    },
+    {
+      "number": 19,
+      "title": "Car Pooling",
+      "problem_statement": "Given trips with passengers picked up and dropped off over ranges, check if capacity is exceeded.",
+      "pattern_explanation": "This is line sweep on additive events. Range activity is represented by start and end changes, then processed in sorted order. It is excellent for resource-capacity problems over intervals.",
+      "trigger_phrase": "The key clue is capacity changing across intervals rather than per-trip simulation. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Record passenger changes at pickup and drop points using a difference map or array. Sweep locations in order while maintaining current passengers. Time: **O(n log n)** if event points are sorted. Space: **O(n)**."
+    },
+    {
+      "number": 20,
+      "title": "Maximum Size Subarray Sum Equals K",
+      "problem_statement": "Find the longest subarray whose sum equals k.",
+      "pattern_explanation": "For longest-length questions, the earliest occurrence of a prefix value is the most valuable. Storing only the first position where each prefix appeared maximizes future subarray lengths.",
+      "trigger_phrase": "Longest subarray with a target sum is usually earliest-prefix bookkeeping. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Keep running prefix sum S. If S-k appeared first at index j, then subarray j+1..i sums to k. Store only the first occurrence of each prefix to maximize length. Time: **O(n)** average. Space: **O(n)**."
+    },
+    {
+      "number": 21,
+      "title": "Range Sum Query 2D - Immutable",
+      "problem_statement": "Given a matrix and many rectangle sum queries, answer each quickly.",
+      "pattern_explanation": "A 2D prefix sum is the matrix version of the same idea. Each cell stores the sum of the rectangle above and to the left, enabling O(1) submatrix sum queries via inclusion-exclusion.",
+      "trigger_phrase": "The trigger is repeated submatrix-sum queries on static data. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Build a 2D prefix matrix where each cell stores sum of the rectangle from (0,0) to that cell. Use inclusion-exclusion to answer any rectangle sum in O(1). Preprocessing time: **O(rows·cols)**. Query time: **O(1)**. Space: **O(rows·cols)**."
+    },
+    {
+      "number": 22,
+      "title": "Number of Submatrices That Sum to Target",
+      "problem_statement": "Count all submatrices that sum to a target.",
+      "pattern_explanation": "Many hard 2D sum problems become manageable by fixing two row boundaries and collapsing the matrix into a 1D array of column sums. Then a well-known 1D prefix-sum technique can be reused.",
+      "trigger_phrase": "2D rectangle counting often becomes manageable by compressing one dimension and reusing a 1D subarray-sum technique. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Fix a top row and a bottom row. Compress the rows between them into a 1D column-sum array. Then count subarrays with target sum in that array using prefix sum plus hashmap. Time: about **O(rows²·cols)** or **O(cols²·rows)** depending on compression direction. Space: **O(cols)** plus hashmap."
+    },
+    {
+      "number": 23,
+      "title": "Maximum Sum Subarray of Size K",
+      "problem_statement": "Given an array and integer k, find the maximum sum of any contiguous subarray of size exactly k.",
+      "pattern_explanation": "A fixed-size sliding window is ideal when every answer comes from a contiguous segment of exact size k. Overlapping windows share almost all of their elements, so you should update incrementally instead of recomputing from scratch.",
+      "trigger_phrase": "“Exact size k” is the strongest fixed-sliding-window trigger. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Compute the first window sum, then slide right by adding the entering element and subtracting the leaving element. Track the maximum seen. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 24,
+      "title": "Longest Substring Without Repeating Characters",
+      "problem_statement": "Find the length of the longest substring with all distinct characters.",
+      "pattern_explanation": "A variable sliding window is appropriate when the substring must stay valid under a property like uniqueness. You expand to gain length and shrink only when the property is violated.",
+      "trigger_phrase": "“Longest substring” plus “no repeats” almost always means variable sliding window. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Expand the right end while tracking character counts or last positions. If a repeat breaks validity, move the left end until the window becomes valid again. Track the best length. Time: **O(n)**. Space: **O(charset)**."
+    },
+    {
+      "number": 25,
+      "title": "Longest Repeating Character Replacement",
+      "problem_statement": "Find the longest substring that can be turned into one repeating character by replacing at most k characters.",
+      "pattern_explanation": "This is a flexible-window optimization problem. The window stays valid as long as the number of characters needing replacement is within budget. Frequency bookkeeping makes that validity check efficient.",
+      "trigger_phrase": "The phrase “at most k replacements inside a substring” signals a window with a validity formula. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Maintain a window and character frequencies. Let maxFreq be the count of the most common character in the window. The window is valid when windowSize-maxFreq <= k. Expand right and shrink when invalid. Time: **O(n)**. Space: **O(charset)**."
+    },
+    {
+      "number": 26,
+      "title": "Minimum Size Subarray Sum",
+      "problem_statement": "Find the length of the smallest contiguous subarray whose sum is at least target, with positive numbers.",
+      "pattern_explanation": "When all values are positive, expanding a window only increases its sum and shrinking only decreases it. That monotonic behavior is exactly why sliding window works here.",
+      "trigger_phrase": "Smallest/longest subarray with positive numbers and a sum constraint is a sliding-window staple. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Expand the right pointer to increase the sum. Once sum>=target, shrink from the left to make the window as small as possible while staying valid. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 27,
+      "title": "Permutation in String",
+      "problem_statement": "Check whether s2 contains a permutation of s1 as a substring.",
+      "pattern_explanation": "If the candidate substring length is fixed, matching frequency profiles is much cheaper than rebuilding every substring. The window updates counts in constant time per move.",
+      "trigger_phrase": "Permutation inside a string means fixed-length frequency matching. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Build frequency counts for s1. Slide a window of length len(s1) over s2 while updating counts. If the frequency profiles match, a permutation exists. Time: **O(n)**. Space: **O(charset)**."
+    },
+    {
+      "number": 28,
+      "title": "Find All Anagrams in a String",
+      "problem_statement": "Return all start indices where a substring is an anagram of a pattern.",
+      "pattern_explanation": "This is the same fixed-length frequency idea, but instead of returning one boolean you collect all start positions where the count profile matches the pattern.",
+      "trigger_phrase": "The trigger is exactly the same as permutation-in-string, but now you need all matching starts. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Maintain a fixed-size window equal to the pattern length. Update character counts as the window moves and record indices whenever counts match. Time: **O(n)**. Space: **O(charset)**."
+    },
+    {
+      "number": 29,
+      "title": "Minimum Window Substring",
+      "problem_statement": "Find the smallest substring of s that contains every character of t with required multiplicities.",
+      "pattern_explanation": "This is the canonical “cover all requirements” sliding-window problem. The window grows until it satisfies all needed counts, then shrinks to become minimal while still valid.",
+      "trigger_phrase": "“Smallest substring containing all required characters” is the canonical variable-window cover problem. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Track required counts from t and expand the right side until all requirements are satisfied. Then shrink from the left while the window still covers all required characters. Keep the minimum valid window. Time: **O(n)** average. Space: **O(charset)**."
+    },
+    {
+      "number": 30,
+      "title": "Max Consecutive Ones III",
+      "problem_statement": "Find the longest subarray containing at most k zeroes, where zeroes may be flipped to ones.",
+      "pattern_explanation": "At-most-k constraint problems are classic sliding windows. You keep the current count of bad elements and shrink only when the allowed budget is exceeded.",
+      "trigger_phrase": "The phrase “at most k bad elements” points directly to a window-count constraint. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use two pointers and count zeroes in the current window. Expand right; when zeroes exceed k, move left until the window is valid again. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 31,
+      "title": "Fruit Into Baskets",
+      "problem_statement": "Find the longest subarray containing at most two distinct values.",
+      "pattern_explanation": "Distinct-count bounded windows are another classic. A small hashmap tracks how many of each type are inside, and the left pointer moves only when the distinct count becomes too large.",
+      "trigger_phrase": "“At most two distinct types in a contiguous segment” is a small-distinct-count sliding window. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Maintain a frequency map for the current window. Expand right, and while distinct types exceed two, shrink from the left. Time: **O(n)**. Space: **O(1)** to **O(k)** depending on value range."
+    },
+    {
+      "number": 32,
+      "title": "Subarrays with K Different Integers",
+      "problem_statement": "Count subarrays with exactly k distinct integers.",
+      "pattern_explanation": "Exactly-k constraints are often awkward directly but easy indirectly. Count at most k, count at most k-1, and subtract to isolate exactly k.",
+      "trigger_phrase": "Exactly-k distinct is usually solved as atMost(k) - atMost(k-1). The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Write a helper that counts subarrays with at most K distinct values using a sliding window. The desired count is helper(k) - helper(k-1). Time: **O(n)**. Space: **O(k)** to **O(n)**."
+    },
+    {
+      "number": 33,
+      "title": "Longest Subarray of 1s After Deleting One Element",
+      "problem_statement": "Find the longest subarray of 1s after deleting exactly one element.",
+      "pattern_explanation": "Deleting or flipping one bad element often translates directly into “maintain a window with at most one zero/bad element.” The final answer is derived from that window size.",
+      "trigger_phrase": "Deleting one element in a binary array usually becomes “window with at most one zero.” The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use a sliding window and keep zero count <= 1. The answer for each valid window is window length minus one deletion. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 34,
+      "title": "Grumpy Bookstore Owner",
+      "problem_statement": "Maximize satisfied customers by choosing one window during which grumpy customers become satisfied.",
+      "pattern_explanation": "When some value is always earned and another value can be unlocked only inside one fixed interval, split the problem into base contribution plus best extra-gain window.",
+      "trigger_phrase": "One effect applies to a single fixed-length interval, so separate base value from extra gain. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "First count customers already satisfied when the owner is not grumpy. Then compute extra recoverable customers in each window of length X using a fixed-size sliding window, and add the best gain. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 35,
+      "title": "Sliding Window Maximum",
+      "problem_statement": "Return the maximum for every window of size k.",
+      "pattern_explanation": "A monotonic deque keeps candidate indices in sorted value order while also respecting the current window. It is the standard answer for per-window max/min queries in O(n).",
+      "trigger_phrase": "Repeated maxima over overlapping windows calls for a deque of useful candidates. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Maintain indices in a deque in decreasing value order. Remove indices that leave the window from the front and smaller values from the back. The front is always the current maximum. Time: **O(n)** amortized. Space: **O(k)**."
+    },
+    {
+      "number": 36,
+      "title": "Minimum Operations to Reduce X to Zero",
+      "problem_statement": "Remove elements from either end so that removed sum equals x; minimize operations.",
+      "pattern_explanation": "Sometimes the direct view of a problem is awkward, but the complement view is simple. Removing from both ends becomes keeping one middle segment, which often exposes a familiar subarray pattern.",
+      "trigger_phrase": "Removing from both ends is often easier when reframed as keeping the longest middle segment. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Compute target = totalSum - x. Then find the longest contiguous subarray with sum target; keeping that subarray means removing everything else. Use prefix sum or sliding window when values allow it. Usually **O(n)**. Space depends on whether prefix map or simple window is used."
+    },
+    {
+      "number": 37,
+      "title": "Number of Nice Subarrays",
+      "problem_statement": "Count subarrays containing exactly k odd numbers.",
+      "pattern_explanation": "This is another exactly-k counting problem. Converting values to a binary feature count reduces the problem to counting subarrays with exactly k special positions.",
+      "trigger_phrase": "Exactly-k special elements again suggests prefix-count or atMost difference. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Convert numbers to parity and either count prefixes of odd totals with a hashmap or use atMost(k)-atMost(k-1) sliding windows. Time: **O(n)**. Space: **O(n)** with prefix counts or **O(1)** to **O(k)** with windows."
+    },
+    {
+      "number": 38,
+      "title": "Longest Continuous Subarray With Absolute Diff <= Limit",
+      "problem_statement": "Find the longest subarray where current max - current min <= limit.",
+      "pattern_explanation": "When a window’s validity depends on both its current maximum and minimum, two monotonic deques can maintain those extremes in O(1) amortized time per step.",
+      "trigger_phrase": "A window with a dynamic max and min calls for monotonic deques. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Maintain one decreasing deque for maximums and one increasing deque for minimums. Expand right, and while max-min > limit, shrink left and pop stale indices. Time: **O(n)** amortized. Space: **O(n)** worst case for deques."
+    },
+    {
+      "number": 39,
+      "title": "Get Equal Substrings Within Budget",
+      "problem_statement": "Find the longest substring that can be transformed within a total cost budget.",
+      "pattern_explanation": "If each position contributes a nonnegative cost and the total must stay within budget, a sliding window is usually the cleanest way to maximize length.",
+      "trigger_phrase": "When each aligned character pair contributes a cost and the total must stay under budget, think cost-window. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Precompute per-position conversion costs abs(s[i]-t[i]). Then run a sliding window whose total cost never exceeds maxCost. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 40,
+      "title": "Longest Substring With At Most K Distinct Characters",
+      "problem_statement": "Find the longest substring with at most k distinct characters.",
+      "pattern_explanation": "This is the general form of the “at most K distinct” sliding-window template. It is a high-frequency interview pattern for strings and arrays.",
+      "trigger_phrase": "“Longest substring” plus a distinct-count limit is a direct sliding-window trigger. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use a frequency map and two pointers. Expand right, and when distinct count exceeds k, shrink from the left until valid again. Time: **O(n)**. Space: **O(k)** to **O(n)**."
+    },
+    {
+      "number": 41,
+      "title": "3Sum",
+      "problem_statement": "Find all unique triplets whose sum is zero.",
+      "pattern_explanation": "Sorting creates order, and order enables two-pointer reasoning. Instead of trying all pairs or triplets, you move pointers based on whether the current sum is too small or too large.",
+      "trigger_phrase": "The triplet version of target sum almost always starts with sorting. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Sort the array. Fix one index i, then use two pointers on the remaining suffix to find pairs summing to -nums[i], skipping duplicates carefully. Time: **O(n²)** after sorting for 3Sum, or **O(n log n)** for sort plus **O(n)** search. Space: depends on output."
+    },
+    {
+      "number": 42,
+      "title": "3Sum Closest",
+      "problem_statement": "Find the triplet whose sum is closest to a target.",
+      "pattern_explanation": "The sorted two-pointer skeleton still works when the target is approximate instead of exact. Pointer movements systematically reduce the gap to the target.",
+      "trigger_phrase": "The word “closest” still fits the sorted two-pointer family because pointer motion can reduce error. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Sort the array. For each fixed i, run left/right pointers and update the best absolute difference. Move left or right depending on whether the current sum is below or above target. Time: **O(n²)**. Space: **O(1)** extra after sorting."
+    },
+    {
+      "number": 43,
+      "title": "Container With Most Water",
+      "problem_statement": "Choose two lines that hold the most water.",
+      "pattern_explanation": "This pattern works when one pointer can be safely discarded by a proof argument. You are not just trying random pointer movements; you are eliminating impossible better answers.",
+      "trigger_phrase": "When area depends on width and the shorter side is the limiter, use elimination logic. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Start pointers at both ends. Compute area. Move the pointer at the shorter line inward, because keeping the shorter line can never improve area with smaller width. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 44,
+      "title": "Trapping Rain Water",
+      "problem_statement": "Compute water trapped between bars after raining.",
+      "pattern_explanation": "This is a specialized two-pointer optimization. Local maxima from both sides are enough to compute trapped water because the limiting side can be resolved first.",
+      "trigger_phrase": "Each position’s water depends on max height to left and right; the efficient version avoids recomputing those maxima repeatedly. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use two pointers with leftMax and rightMax. Whichever side has smaller current boundary can be resolved immediately because the opposite side is guaranteed high enough to not be the limiting factor. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 45,
+      "title": "Remove Duplicates from Sorted Array",
+      "problem_statement": "Remove duplicates in-place from a sorted array and return the new length.",
+      "pattern_explanation": "With sorted arrays, duplicates or compacted results can often be handled by one read pointer and one write pointer. The sorted order guarantees that equal values are adjacent.",
+      "trigger_phrase": "Sorted input means equal values are adjacent, so one write pointer is enough. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Keep a slow pointer for the place to write the next unique element. Scan with a fast pointer and write only when the value changes. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 46,
+      "title": "Sort Colors",
+      "problem_statement": "Sort an array containing only 0s, 1s, and 2s in one pass.",
+      "pattern_explanation": "This is three-way partitioning in one pass. When there are only a few categories, it is often better to place them directly into the correct partition rather than sort generally.",
+      "trigger_phrase": "The small fixed set of categories suggests partitioning instead of general sorting. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use three pointers: low for next 0, mid for current scan, high for next 2. Swap based on the value at mid. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 47,
+      "title": "Merge Sorted Array",
+      "problem_statement": "Merge two sorted arrays into the first one in-place.",
+      "pattern_explanation": "When merging into an array that has unused space at the end, writing from the back avoids overwriting values you still need to compare.",
+      "trigger_phrase": "When the destination has free space at the end, fill it from the back to avoid overwriting. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Point i to the end of initialized part of nums1, j to end of nums2, and k to end of total space. Place the larger of nums1[i] and nums2[j] at k and move backward. Time: **O(m+n)**. Space: **O(1)** extra."
+    },
+    {
+      "number": 48,
+      "title": "Squares of a Sorted Array",
+      "problem_statement": "Return the sorted squares of a sorted array that may contain negatives.",
+      "pattern_explanation": "The squared values are not individually sorted because negatives become positive, but the largest absolute values still live at the ends. Two pointers exploit that structure.",
+      "trigger_phrase": "The largest square comes from the largest absolute value, which lives at one of the ends. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use two pointers at both ends. Compare absolute values, place the larger square at the end of the answer, and move inward. Time: **O(n)**. Space: **O(n)** for the answer."
+    },
+    {
+      "number": 49,
+      "title": "Merge Intervals",
+      "problem_statement": "Merge all overlapping intervals.",
+      "pattern_explanation": "Interval problems usually become simple after sorting by start. Overlaps then appear consecutively, so a single pass can merge them.",
+      "trigger_phrase": "Intervals become easy after sorting by start time. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Sort intervals by starting point. Walk through them, merging with the last result interval if they overlap; otherwise start a new merged interval. Time: **O(n log n)** due to sorting. Space: **O(n)** for output."
+    },
+    {
+      "number": 50,
+      "title": "Insert Interval",
+      "problem_statement": "Insert a new interval into sorted non-overlapping intervals and merge if needed.",
+      "pattern_explanation": "When intervals are already sorted and non-overlapping, insertion can be handled in one sweep by splitting the process into before, overlap, and after phases.",
+      "trigger_phrase": "Because the original intervals are sorted and non-overlapping, you can process in three clean phases. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Add all intervals ending before the new interval starts. Merge all intervals overlapping the new interval. Then append the rest. Time: **O(n)**. Space: **O(n)** for output."
+    },
+    {
+      "number": 51,
+      "title": "Non-overlapping Intervals",
+      "problem_statement": "Remove the minimum number of intervals so the rest do not overlap.",
+      "pattern_explanation": "For selecting the maximum number of non-overlapping intervals, keeping the interval that ends earliest preserves the most room for the future. This is a classic greedy proof.",
+      "trigger_phrase": "When you want the maximum number of non-overlapping intervals, greedily keep the earliest finishing one. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Sort by end time. Walk through intervals, taking a new interval only if it starts after or at the end of the last kept one. Removals are total minus kept. Time: **O(n log n)** due to sorting. Space: **O(1)** extra."
+    },
+    {
+      "number": 52,
+      "title": "Meeting Rooms II",
+      "problem_statement": "Find the minimum number of meeting rooms needed for intervals.",
+      "pattern_explanation": "A min-heap of end times is the standard way to track which intervals are still active. It tells you whether a new resource is required when the next interval starts.",
+      "trigger_phrase": "You need to know how many meetings overlap at the same time. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Sort meetings by start time. Use a min-heap of end times for active meetings. Before adding a new meeting, pop all rooms whose meetings have ended. Time: **O(n log n)**. Space: **O(n)**."
+    },
+    {
+      "number": 53,
+      "title": "Minimum Number of Arrows to Burst Balloons",
+      "problem_statement": "Find the minimum arrows needed to burst all balloon intervals.",
+      "pattern_explanation": "For stabbing intervals with points, choosing the current earliest finishing point is optimal because it covers the current interval and leaves maximum flexibility for later ones.",
+      "trigger_phrase": "This is interval stabbing: one shot at the end of the current overlap covers the most future intervals. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Sort intervals by end. Shoot an arrow at the end of the first balloon, and whenever the next balloon starts after the arrow point, fire a new arrow at its end. Time: **O(n log n)**. Space: **O(1)** extra."
+    },
+    {
+      "number": 54,
+      "title": "Gas Station",
+      "problem_statement": "Return the starting gas station index to complete the circuit, or -1.",
+      "pattern_explanation": "Some circular feasibility problems can be solved by proving that failed prefixes can never contain a valid start. That lets you skip entire ranges instead of retesting them.",
+      "trigger_phrase": "The clue is circular feasibility with net gain/loss and the need to skip impossible prefixes. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "If total gas < total cost, answer is impossible. Otherwise scan once with current balance; whenever balance becomes negative, reset the start to the next station and reset balance. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 55,
+      "title": "Jump Game",
+      "problem_statement": "Determine whether you can reach the last index.",
+      "pattern_explanation": "Reachability in jump arrays is often about maintaining the farthest position seen so far. There is no need to branch into all possible jumps.",
+      "trigger_phrase": "This is about farthest reachable frontier, not exploring all paths. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Track the farthest index you can reach while scanning. If you ever reach an index beyond that frontier, you are stuck. If the frontier reaches the last index, success. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 56,
+      "title": "Jump Game II",
+      "problem_statement": "Find the minimum jumps needed to reach the last index.",
+      "pattern_explanation": "This is a BFS-layer idea on an array: all positions within the current reachable range belong to the same jump count. Expanding the farthest next range gives the minimum jumps.",
+      "trigger_phrase": "Minimum jumps in a 1D array of ranges behaves like BFS over layers. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Track the current range reachable with the current number of jumps and the farthest range reachable with one more jump. When you finish the current range, increment jumps and advance to the next farthest range. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 57,
+      "title": "Candy",
+      "problem_statement": "Assign candies so higher-rated children get more than adjacent lower-rated ones, minimizing total candies.",
+      "pattern_explanation": "When local constraints apply from both left and right, two directional passes are often the cleanest way to satisfy both without repeated readjustments.",
+      "trigger_phrase": "Local constraints exist in both directions, so one directional pass is not enough. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Give everyone one candy. Sweep left-to-right so each child higher than the left neighbor gets one more. Then sweep right-to-left so higher than the right neighbor also gets enough, taking the max of both requirements. Time: **O(n)**. Space: **O(n)** or **O(1)** depending on implementation."
+    },
+    {
+      "number": 58,
+      "title": "Boats to Save People",
+      "problem_statement": "Find the minimum boats needed when each boat can carry at most two people under a weight limit.",
+      "pattern_explanation": "Sorting reveals the best pairings. In weight-limit problems, pairing the lightest with the heaviest is often the only greedy move worth checking first.",
+      "trigger_phrase": "After sorting, the optimal pairing tries to fit the lightest with the heaviest whenever possible. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Sort weights. Use two pointers: if lightest+heaviest fits, pair them; otherwise send the heaviest alone. Count boats. Time: **O(n log n)**. Space: **O(1)** extra after sorting."
+    },
+    {
+      "number": 59,
+      "title": "Daily Temperatures",
+      "problem_statement": "For each day, find how many days until a warmer temperature.",
+      "pattern_explanation": "A monotonic decreasing stack solves “next greater element” by storing unresolved indices waiting for a larger value. Each index is pushed and popped at most once.",
+      "trigger_phrase": "“Next greater element to the right” is the core pattern here. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Maintain a stack of indices with decreasing temperatures. As you scan, whenever the current temperature is higher than the stack top, pop and fill that answer with the distance to the current index. Time: **O(n)** amortized. Space: **O(n)**."
+    },
+    {
+      "number": 60,
+      "title": "Next Greater Element II",
+      "problem_statement": "For each element in a circular array, find the next greater value.",
+      "pattern_explanation": "Circular variants often require simulating an extra pass, but the same monotonic-stack principle still applies. The extra pass only serves to resolve wrap-around answers.",
+      "trigger_phrase": "The circular twist usually means simulate two passes while still using a monotonic stack. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Iterate indices twice modulo n. Use a decreasing stack of unresolved indices from the first pass. During the second pass, resolve any elements that find a greater value. Time: **O(n)** amortized. Space: **O(n)**."
+    },
+    {
+      "number": 61,
+      "title": "Largest Rectangle in Histogram",
+      "problem_statement": "Find the largest rectangle under a histogram.",
+      "pattern_explanation": "For span or rectangle problems, each element’s useful interval is bounded by the first smaller element on each side. A monotonic stack finds those boundaries efficiently.",
+      "trigger_phrase": "For each bar, you need the first smaller bar on both sides. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use a monotonic increasing stack of indices. When a shorter bar arrives, pop taller bars and compute the rectangle where the popped bar is the limiting height between the new index and the new stack top. Time: **O(n)** amortized. Space: **O(n)**."
+    },
+    {
+      "number": 62,
+      "title": "Online Stock Span",
+      "problem_statement": "For each day, return the number of consecutive previous days with price <= today’s price.",
+      "pattern_explanation": "This stack stores compressed history. Instead of revisiting many previous smaller values one by one, their spans are aggregated into a single stack entry.",
+      "trigger_phrase": "You need to compress dominated previous values into spans. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Maintain a stack of pairs (price, span) with strictly decreasing prices. While the top price <= current price, add its span to current span and pop. Time: **O(n)** total across pushes/pops. Space: **O(n)**."
+    },
+    {
+      "number": 63,
+      "title": "Asteroid Collision",
+      "problem_statement": "Simulate collisions between moving asteroids, where only right-moving vs left-moving conflicts matter.",
+      "pattern_explanation": "A stack is the natural choice when only the most recent unresolved element can interact with the current one. It keeps the active frontier of a simulation compact.",
+      "trigger_phrase": "This is a local frontier-simulation problem; only unresolved right movers matter when a left mover appears. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use a stack for surviving asteroids. For each new asteroid, resolve collisions while the stack top is moving right and the new asteroid is moving left. Compare magnitudes to decide which survive. Time: **O(n)** amortized. Space: **O(n)**."
+    },
+    {
+      "number": 64,
+      "title": "Kth Largest Element in an Array",
+      "problem_statement": "Return the kth largest element in an unsorted array.",
+      "pattern_explanation": "Order-statistic problems do not require a full sort. A heap gives O(n log k), while quickselect can find the kth element in expected linear time.",
+      "trigger_phrase": "You need order statistics, not full sorted order. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Either keep a min-heap of size k while scanning, or use quickselect partitioning to place elements around a pivot until the kth position is found. Heap: **O(n log k)**, Quickselect: expected **O(n)**. Space varies by method."
+    },
+    {
+      "number": 65,
+      "title": "K Closest Points to Origin",
+      "problem_statement": "Return the k points with smallest distance to origin.",
+      "pattern_explanation": "Top-k by score problems usually want a heap. The heap keeps only the most relevant k candidates instead of fully sorting all n items.",
+      "trigger_phrase": "The phrase “top/bottom k by some score” suggests heap or quickselect. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Compute squared distance for each point. Maintain a max-heap of size k or use quickselect to keep only the k closest points. Time: **O(n log k)**. Space: **O(k)**."
+    },
+    {
+      "number": 66,
+      "title": "Task Scheduler",
+      "problem_statement": "Schedule tasks with cooldown so identical tasks are separated by n intervals, minimizing total time.",
+      "pattern_explanation": "When scheduling with cooldowns, the most frequent tasks dominate the difficulty. Frequency-driven greedy or heap simulation captures that structure.",
+      "trigger_phrase": "Cooldown plus repeated high-frequency tasks means frequency structure controls the answer. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Either derive the idle-slot formula from the maximum frequency, or simulate cycles using a max-heap of remaining counts and a cooldown queue. Heap simulation is usually **O(n log alphabet)** or **O(tasks log types)**. Space: **O(types)**."
+    },
+    {
+      "number": 67,
+      "title": "Reorganize String",
+      "problem_statement": "Rearrange a string so no adjacent characters are equal.",
+      "pattern_explanation": "If repeated characters cause conflicts only with immediate neighbors, choosing the currently most frequent valid character is a sound greedy direction. A max-heap supports that choice efficiently.",
+      "trigger_phrase": "This is a greedy “pick the most frequent valid character next” problem. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use a max-heap by remaining frequency. Pop the best character, append it, and temporarily hold it aside so it is not immediately reused. Then place the next best and push back characters with remaining count. Time: **O(n log alphabet)**. Space: **O(alphabet)**."
+    },
+    {
+      "number": 68,
+      "title": "Search in Rotated Sorted Array",
+      "problem_statement": "Search for a target in a rotated sorted array.",
+      "pattern_explanation": "A rotated sorted array still contains sorted structure. At every step, one half is normally ordered, and that is enough to continue binary search.",
+      "trigger_phrase": "Binary search still works because at least one half is always normally sorted. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "At each midpoint, determine which half is sorted. Decide whether the target lies in that sorted half; if yes, discard the other half, otherwise search the unsorted side. Time: **O(log n)**. Space: **O(1)**."
+    },
+    {
+      "number": 69,
+      "title": "Find Minimum in Rotated Sorted Array",
+      "problem_statement": "Find the minimum element in a rotated sorted array with distinct values.",
+      "pattern_explanation": "The minimum in a rotated array sits at the pivot. Comparing mid against one boundary reveals which side still contains that pivot.",
+      "trigger_phrase": "The order break reveals the rotation pivot, and binary search can narrow it. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Compare mid with right. If nums[mid] > nums[right], minimum is to the right; otherwise minimum is at mid or to the left. Time: **O(log n)**. Space: **O(1)**."
+    },
+    {
+      "number": 70,
+      "title": "Capacity to Ship Packages Within D Days",
+      "problem_statement": "Find the minimum ship capacity needed to ship all packages within D days.",
+      "pattern_explanation": "When the answer is a number and the question is “what is the minimum value that makes the process feasible?”, binary search on answer is often the best move.",
+      "trigger_phrase": "“Minimum feasible capacity” is the exact trigger for binary search on answer. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Search capacity between max(weight) and sum(weights). For a guessed capacity, greedily simulate loading in order and count days needed. If days <= D, try smaller capacity; otherwise go larger. Time: **O(n log answerRange)**. Space: **O(1)**."
+    },
+    {
+      "number": 71,
+      "title": "Koko Eating Bananas",
+      "problem_statement": "Find the minimum eating speed to finish all piles within H hours.",
+      "pattern_explanation": "This is the same feasibility-search idea specialized to rates and speeds. A candidate speed can be checked directly, and feasibility is monotonic.",
+      "trigger_phrase": "“Minimum speed/rate to finish by deadline” is a classic monotonic-feasibility problem. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Binary search the speed. For a candidate speed k, total hours is the sum of ceil(pile/k) over all piles. If total hours <= H, k is feasible. Time: **O(n log maxPile)**. Space: **O(1)**."
+    },
+    {
+      "number": 72,
+      "title": "Split Array Largest Sum",
+      "problem_statement": "Split array into m contiguous parts minimizing the largest part sum.",
+      "pattern_explanation": "Minimizing the maximum partition sum is a classic monotonic-answer problem. If a certain maximum is feasible, any larger maximum is also feasible.",
+      "trigger_phrase": "The objective is a minimum possible maximum, which usually means binary search on answer. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Binary search a candidate max sum. Greedily form partitions without exceeding it, counting how many parts are needed. If you need <= m parts, the candidate is feasible. Time: **O(n log sum(nums))**. Space: **O(1)**."
+    },
+    {
+      "number": 73,
+      "title": "Valid Anagram",
+      "problem_statement": "Check whether two strings are anagrams.",
+      "pattern_explanation": "Character-frequency equality is often the simplest string invariant. When order does not matter, counts do.",
+      "trigger_phrase": "Anagrams are pure frequency equality after ignoring order. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Count characters in one string and subtract counts using the other. All final counts must be zero. Time: **O(n)**. Space: **O(charset)**."
+    },
+    {
+      "number": 74,
+      "title": "Group Anagrams",
+      "problem_statement": "Group strings that are anagrams of each other.",
+      "pattern_explanation": "Grouping by structural equivalence usually requires a canonical key. For anagrams, sorted letters or letter counts are reliable signatures.",
+      "trigger_phrase": "When groups are based on reordering, you need a canonical representation. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "For each string, compute a key such as the sorted string or a 26-count signature. Use a hashmap from key to list of words. Time: **O(total characters × log word length)** for sorted-key version, or linear with count-signature. Space: **O(total characters)**."
+    },
+    {
+      "number": 75,
+      "title": "Valid Palindrome",
+      "problem_statement": "Check whether a string is a palindrome after ignoring non-alphanumeric characters and case.",
+      "pattern_explanation": "When a string must be checked from both ends while ignoring noise, filtered two pointers are simpler and more memory-efficient than building a cleaned copy first.",
+      "trigger_phrase": "Palindrome plus ignore-noise wording strongly suggests filtered two pointers. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use two pointers from both ends. Skip non-alphanumeric characters and compare lowercase versions of the valid characters. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 76,
+      "title": "Longest Palindromic Substring",
+      "problem_statement": "Find the longest contiguous palindromic substring.",
+      "pattern_explanation": "Every palindromic substring has a center. Expanding around centers avoids testing every substring from scratch.",
+      "trigger_phrase": "Every palindrome is centered either on one character or between two characters. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "For each index, expand around both possible centers while characters match. Track the longest span found. Time: **O(n²)** worst case. Space: **O(1)**."
+    },
+    {
+      "number": 77,
+      "title": "Palindromic Substrings",
+      "problem_statement": "Count all palindromic substrings.",
+      "pattern_explanation": "This is the counting version of the same palindrome insight: each successful expansion around a center contributes one palindrome.",
+      "trigger_phrase": "Counting all palindromic substrings is easier by counting around each center. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Expand from every odd and even center and increment the count for every successful expansion. Time: **O(n²)** worst case. Space: **O(1)**."
+    },
+    {
+      "number": 78,
+      "title": "Longest Common Prefix",
+      "problem_statement": "Find the longest common prefix among several strings.",
+      "pattern_explanation": "When multiple strings must share the same prefix, keeping a candidate prefix and shrinking it as needed is cleaner than pairwise comparisons across all strings.",
+      "trigger_phrase": "Prefix problems are simpler when you keep shrinking a candidate prefix. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Use the first string as a candidate prefix. For each other string, shorten the prefix until that string starts with it. Time: **O(total characters)** in practice. Space: **O(1)** extra."
+    },
+    {
+      "number": 79,
+      "title": "String Compression",
+      "problem_statement": "Compress repeated characters in-place and return the new length.",
+      "pattern_explanation": "Consecutive equal characters are best handled as runs. A read pointer finds run boundaries; a write pointer emits the compressed representation.",
+      "trigger_phrase": "The clue is consecutive runs, so think run-length encoding with read/write pointers. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Scan runs of equal characters using a fast pointer. Write the character once, then write the digits of the run length if it exceeds one. Time: **O(n)**. Space: **O(1)** extra."
+    },
+    {
+      "number": 80,
+      "title": "Backspace String Compare",
+      "problem_statement": "Check whether two strings are equal after applying backspaces represented by '#'.",
+      "pattern_explanation": "Backspace semantics affect previous characters, so reading from right to left lets you skip deleted characters without building the final string.",
+      "trigger_phrase": "Backspaces affect nearest previous characters, so reverse scanning with skip counts is natural. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Walk both strings from right to left. Maintain a skip counter for each string: on '#', increment; on regular char while skip>0, decrement skip and skip the char; otherwise compare current valid chars. Time: **O(n)**. Space: **O(1)**."
+    },
+    {
+      "number": 81,
+      "title": "Decode String",
+      "problem_statement": "Decode expressions like 3[a2[c]] into expanded strings.",
+      "pattern_explanation": "Nested bracket structures create natural entry and exit points. A stack stores the context that must be restored when a nested block ends.",
+      "trigger_phrase": "Nested repetition with brackets is a stack-parsing textbook problem. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Scan characters. Build current number and current string. On '[', push current string and number, then reset. On ']', pop count and previous string, and append current repeated count times. Time: **O(n)** plus output building. Space: **O(n)**."
+    },
+    {
+      "number": 82,
+      "title": "Basic Calculator II",
+      "problem_statement": "Evaluate an expression containing +, -, *, / without parentheses.",
+      "pattern_explanation": "A stack or rolling previous term is helpful when some operations must be applied immediately while others can wait. That matches operator-precedence evaluation.",
+      "trigger_phrase": "Operator precedence means multiplication and division must be applied before later additions and subtractions. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Parse left to right, building the current number. On an operator or end, apply the previous operator: push for +/-, and immediately combine with the top for */. Sum the stack at the end. Time: **O(n)**. Space: **O(n)** in stack form or **O(1)** with rolling-term optimization."
+    },
+    {
+      "number": 83,
+      "title": "Word Break",
+      "problem_statement": "Given a string and dictionary, decide whether the string can be segmented into dictionary words.",
+      "pattern_explanation": "String segmentation usually has overlapping subproblems on suffixes or prefixes. DP prevents the same split attempts from being repeated exponentially.",
+      "trigger_phrase": "A segmentation question over prefixes usually means DP over string positions. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Let dp[i] mean the prefix of length i can be segmented. For each end position i, test earlier split points j where dp[j] is true and s[j:i] is in the dictionary. Time: typically **O(n²)** with substring checks unless optimized. Space: **O(n)**."
+    },
+    {
+      "number": 84,
+      "title": "Edit Distance",
+      "problem_statement": "Find minimum insertions, deletions, and replacements to transform one string into another.",
+      "pattern_explanation": "When two strings are compared under edit operations, the state naturally depends on prefixes of both strings. That creates a grid-shaped DP.",
+      "trigger_phrase": "The problem compares prefixes of two strings under allowed operations, a classic 2D DP shape. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Let dp[i][j] be the edit distance between the first i chars of word1 and first j chars of word2. If last chars match, copy dp[i-1][j-1]; otherwise take 1 + min(insert, delete, replace). Time: **O(mn)**. Space: **O(mn)** or **O(min(m,n))** with rolling rows."
+    },
+    {
+      "number": 85,
+      "title": "Number of Islands",
+      "problem_statement": "Count connected components of land in a binary grid.",
+      "pattern_explanation": "Connected-component questions on grids are almost always flood-fill problems. DFS or BFS marks the entire region so you never count it twice.",
+      "trigger_phrase": "The words “connected group” on a grid should instantly trigger flood-fill DFS/BFS. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Scan all cells. When you find unvisited land, increment the island count and run DFS/BFS to mark the entire connected land mass. Time: **O(rows·cols)**. Space: recursion/queue up to component size."
+    },
+    {
+      "number": 86,
+      "title": "Max Area of Island",
+      "problem_statement": "Find the largest connected region of 1s in a grid.",
+      "pattern_explanation": "This is the same flood-fill idea, but with an extra accumulator to measure component size instead of just marking visited cells.",
+      "trigger_phrase": "This is the same component-traversal pattern, but now you need size instead of count. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "For every unvisited land cell, run DFS/BFS, counting how many land cells belong to that component. Track the maximum area. Time: **O(rows·cols)**. Space: recursion/queue up to component size."
+    },
+    {
+      "number": 87,
+      "title": "Island Perimeter",
+      "problem_statement": "Compute the perimeter of a land shape in a grid.",
+      "pattern_explanation": "Some grid questions do not require traversal at all; each cell’s contribution can be computed from its immediate neighbors. Recognizing that avoids unnecessary DFS/BFS.",
+      "trigger_phrase": "When perimeter is defined by shared edges, local contribution counting is simplest. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "For each land cell, add 4. Subtract 2 for each shared edge with an already-counted land neighbor, or equivalently subtract for each adjacent land side. Time: **O(rows·cols)**. Space: **O(1)**."
+    },
+    {
+      "number": 88,
+      "title": "Flood Fill",
+      "problem_statement": "Recolor the connected region starting from a source cell.",
+      "pattern_explanation": "When the task is to recolor or replace all cells connected to a source, flood-fill is the direct and simplest pattern.",
+      "trigger_phrase": "The key phrase is “connected cells of same original color.” The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Starting from the source, DFS/BFS through neighbors that share the original color and recolor them to the new color. Time: **O(rows·cols)** in worst case. Space: recursion/queue proportional to region size."
+    },
+    {
+      "number": 89,
+      "title": "Surrounded Regions",
+      "problem_statement": "Capture all 'O' regions fully surrounded by 'X' on a board.",
+      "pattern_explanation": "If border-connected regions behave differently from enclosed regions, start from the border. That usually flips the problem from hard to easy.",
+      "trigger_phrase": "Boundary-connected regions are safe, so start from the boundary instead of testing each region separately. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Run DFS/BFS from every boundary 'O' and temporarily mark all reachable 'O's as safe. Then flip the remaining unmarked 'O's to 'X' and restore the safe marks. Time: **O(rows·cols)**. Space: recursion/queue proportional to marked region size."
+    },
+    {
+      "number": 90,
+      "title": "Rotting Oranges",
+      "problem_statement": "Find the minimum minutes to rot all fresh oranges when rotten ones infect neighbors each minute.",
+      "pattern_explanation": "When influence spreads simultaneously from many sources, putting them all into the queue at time 0 is the correct BFS model.",
+      "trigger_phrase": "Simultaneous spreading from multiple starting points is the exact multi-source BFS pattern. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Put all initially rotten oranges in a queue with time 0. BFS outward level by level, rotting fresh neighbors and counting minutes until no more changes. If any fresh orange remains, return -1. Time: **O(rows·cols)**. Space: queue up to all cells."
+    },
+    {
+      "number": 91,
+      "title": "01 Matrix",
+      "problem_statement": "For each cell containing 1, find distance to nearest 0.",
+      "pattern_explanation": "This is the distance version of multi-source BFS. The first time a cell is reached gives its nearest-source distance in an unweighted grid.",
+      "trigger_phrase": "Distance to nearest source for every cell is best solved by starting from all sources together. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Push all zero cells into a queue first. BFS outward, assigning each unvisited one-cell distance = parent distance + 1. Time: **O(rows·cols)**. Space: queue up to all cells."
+    },
+    {
+      "number": 92,
+      "title": "Walls and Gates",
+      "problem_statement": "Fill each empty room with distance to its nearest gate.",
+      "pattern_explanation": "Same nearest-source principle, but framed in terms of gates and rooms. BFS radiates outward from all gates together.",
+      "trigger_phrase": "Again, the question asks for nearest among many sources. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Enqueue all gates and BFS through empty rooms. The first time you reach a room is its shortest distance to a gate. Time: **O(rows·cols)**. Space: queue up to all cells."
+    },
+    {
+      "number": 93,
+      "title": "Shortest Path in Binary Matrix",
+      "problem_statement": "Find the shortest clear path from top-left to bottom-right in a binary matrix.",
+      "pattern_explanation": "Shortest path in an unweighted grid is textbook BFS. DFS may find a path, but BFS finds the shortest path first.",
+      "trigger_phrase": "Minimum number of moves in an unweighted grid is BFS, not DFS. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "If start or end is blocked, fail immediately. Otherwise BFS from the start across all allowed directions, storing path length. The first time you reach the target is the shortest path. Time: **O(rows·cols)**. Space: queue plus visited structure."
+    },
+    {
+      "number": 94,
+      "title": "Number of Closed Islands",
+      "problem_statement": "Count islands of zeros that are fully surrounded by ones and do not touch the border.",
+      "pattern_explanation": "When border-connected components are invalid, removing them first simplifies the counting of the valid interior components.",
+      "trigger_phrase": "When border contact disqualifies a region, first remove all border-connected regions. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Flood-fill from all border zeroes to erase or mark open islands. Then count and flood-fill remaining zero components. Time: **O(rows·cols)**. Space: recursion/queue proportional to explored cells."
+    },
+    {
+      "number": 95,
+      "title": "Pacific Atlantic Water Flow",
+      "problem_statement": "Return cells from which water can flow to both the Pacific and Atlantic oceans.",
+      "pattern_explanation": "Sometimes forward search from every cell is expensive, but reverse search from destinations is cheap. Water-flow problems often become easier when reversed this way.",
+      "trigger_phrase": "Trying every cell outward is wasteful; reverse the direction of reasoning. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Run DFS/BFS from the Pacific edges inward, only moving to neighbors of equal or greater height, because those cells can flow down to the ocean. Do the same from Atlantic edges. Cells reachable from both traversals are the answer. Time: **O(rows·cols)**. Space: visited sets/queues for two traversals."
+    },
+    {
+      "number": 96,
+      "title": "Unique Paths",
+      "problem_statement": "Count paths from top-left to bottom-right moving only right or down.",
+      "pattern_explanation": "Restricted movement on a grid produces an acyclic dependency graph. That is a perfect shape for counting DP.",
+      "trigger_phrase": "Restricted-direction counting on a grid is classic DP. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Let dp[r][c] be number of ways to reach cell (r,c). Then dp[r][c]=dp[r-1][c]+dp[r][c-1], with first row and first column initialized to 1. Time: **O(rows·cols)**. Space: **O(rows·cols)** or **O(cols)** optimized."
+    },
+    {
+      "number": 97,
+      "title": "Unique Paths II",
+      "problem_statement": "Count paths with obstacles in the grid.",
+      "pattern_explanation": "This is the same path-counting DP, but obstacle cells simply block transitions by contributing zero ways.",
+      "trigger_phrase": "This is the same DP structure, but blocked cells contribute zero ways. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Initialize dp carefully, treating obstacle cells as zero. For every open cell, add ways from top and left if they exist. Time: **O(rows·cols)**. Space: **O(rows·cols)** or **O(cols)**."
+    },
+    {
+      "number": 98,
+      "title": "Minimum Path Sum",
+      "problem_statement": "Find a path from top-left to bottom-right with minimum total sum, moving only right or down.",
+      "pattern_explanation": "If each path accumulates cost and movement is restricted, dynamic programming can compute the optimal path to each cell from smaller subproblems.",
+      "trigger_phrase": "Again, the grid is acyclic with restricted moves, so each answer depends only on top and left. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Let dp[r][c] be the minimum cost to reach cell (r,c). Then dp[r][c]=grid[r][c]+min(dp[r-1][c], dp[r][c-1]), with base initialization along borders. Time: **O(rows·cols)**. Space: **O(rows·cols)** or **O(cols)**."
+    },
+    {
+      "number": 99,
+      "title": "Game of Life",
+      "problem_statement": "Update the board simultaneously according to neighbor-count rules.",
+      "pattern_explanation": "Simultaneous updates often require either a copy or temporary encoded states. The essence is to preserve old information until all transitions are decided.",
+      "trigger_phrase": "Simultaneous updates mean you must preserve old state while writing new state. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Either use a copy of the board or encode transitions in-place with temporary markers such as 2 and -1. Count live neighbors using original-state interpretation, then finalize markers in a second pass. Time: **O(rows·cols)**. Space: **O(1)** extra if encoded in place."
+    },
+    {
+      "number": 100,
+      "title": "Word Search",
+      "problem_statement": "Determine whether a word exists in a grid by moving to adjacent cells without reusing a cell.",
+      "pattern_explanation": "When you need to build a path letter by letter without reusing cells, DFS with backtracking is the natural pattern. Each call represents a prefix decision and undoes itself on return.",
+      "trigger_phrase": "This is path search with constraints and prefix matching, so backtracking is natural. The mental move is: ignore the story, isolate the structure, and ask which standard pattern makes repeated work disappear.",
+      "detailed_solution": "Start DFS from every cell matching the first character. At each step, mark the current cell as used, try all valid neighbors for the next character, and unmark on return. Success occurs when all characters are matched. Worst-case time is exponential in word length, but pruning is strong in practice. Space: recursion depth **O(word length)**."
+    }
+  ]
+}
