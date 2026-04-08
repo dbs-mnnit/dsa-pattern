@@ -2,12 +2,9 @@ import React, { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import handbook from "../dsa_100_array_string_grid_handbook.json";
 
 // ============================================================
-// STORAGE: Uses window.storage (persistent cross-device) API
-// Falls back to in-memory if unavailable
+// STORAGE: window.storage (cross-device) → in-memory fallback
 // ============================================================
-
 const memoryStore = {};
-
 const storage = {
   async get(key) {
     try {
@@ -19,781 +16,770 @@ const storage = {
     return memoryStore[key] ?? null;
   },
   async set(key, value) {
-    try {
-      if (window.storage) {
-        await window.storage.set(key, JSON.stringify(value));
-      }
-    } catch (_) {}
+    try { if (window.storage) await window.storage.set(key, JSON.stringify(value)); } catch (_) {}
     memoryStore[key] = value;
+  },
+};
+
+// ============================================================
+// THEME TOKENS — every color in one place, swapped by mode
+// ============================================================
+const THEMES = {
+  dark: {
+    bgRoot:       "#050811",
+    bgHeader:     "rgba(5,8,17,0.9)",
+    bgSidebar:    "rgba(8,12,26,0.97)",
+    bgCard:       "rgba(255,255,255,0.03)",
+    bgCardHover:  "rgba(255,255,255,0.055)",
+    bgInput:      "rgba(255,255,255,0.04)",
+    bgTag:        "rgba(255,255,255,0.07)",
+    bgTrigger:    "rgba(251,191,36,0.07)",
+    bgSolvedCard: "rgba(52,211,153,0.07)",
+    borderSubtle: "rgba(255,255,255,0.07)",
+    borderMedium: "rgba(255,255,255,0.12)",
+    borderInput:  "rgba(255,255,255,0.09)",
+    borderFocus:  "rgba(56,189,248,0.5)",
+    borderTrigger:"rgba(251,191,36,0.2)",
+    borderSolved: "rgba(52,211,153,0.2)",
+    textPrimary:  "#f1f5f9",
+    textSecondary:"#cbd5e1",
+    textMuted:    "#94a3b8",
+    textFaint:    "#64748b",
+    textXFaint:   "#334155",
+    textStrong:   "#ffffff",
+    textTrigger:  "#fde68a",
+    gridLine:     "rgba(255,255,255,0.016)",
+    mesh1:        "rgba(56,189,248,0.07)",
+    mesh2:        "rgba(167,139,250,0.07)",
+    mesh3:        "rgba(52,211,153,0.05)",
+    shadowCard:   "0 4px 24px rgba(0,0,0,0.35)",
+    scrollbar:    "rgba(255,255,255,0.09)",
+    overlay:      "rgba(0,0,0,0.72)",
+    barTrack:     "rgba(255,255,255,0.07)",
+    statusTodo:   "#3b4a5c",
+  },
+  light: {
+    bgRoot:       "#eef2f7",
+    bgHeader:     "rgba(255,255,255,0.93)",
+    bgSidebar:    "rgba(250,252,255,0.98)",
+    bgCard:       "rgba(255,255,255,0.92)",
+    bgCardHover:  "rgba(255,255,255,1)",
+    bgInput:      "rgba(255,255,255,0.95)",
+    bgTag:        "rgba(0,0,0,0.055)",
+    bgTrigger:    "rgba(217,119,6,0.07)",
+    bgSolvedCard: "rgba(5,150,105,0.07)",
+    borderSubtle: "rgba(0,0,0,0.08)",
+    borderMedium: "rgba(0,0,0,0.13)",
+    borderInput:  "rgba(0,0,0,0.1)",
+    borderFocus:  "rgba(2,132,199,0.5)",
+    borderTrigger:"rgba(202,138,4,0.28)",
+    borderSolved: "rgba(5,150,105,0.28)",
+    textPrimary:  "#0f172a",
+    textSecondary:"#1e293b",
+    textMuted:    "#475569",
+    textFaint:    "#64748b",
+    textXFaint:   "#94a3b8",
+    textStrong:   "#000000",
+    textTrigger:  "#78350f",
+    gridLine:     "rgba(0,0,0,0.035)",
+    mesh1:        "rgba(14,165,233,0.08)",
+    mesh2:        "rgba(139,92,246,0.07)",
+    mesh3:        "rgba(16,185,129,0.06)",
+    shadowCard:   "0 2px 14px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04)",
+    scrollbar:    "rgba(0,0,0,0.13)",
+    overlay:      "rgba(0,0,0,0.45)",
+    barTrack:     "rgba(0,0,0,0.07)",
+    statusTodo:   "#cbd5e1",
+  },
+};
+
+// Accent palette — slightly richer in light mode for contrast on white
+const ACCENTS = {
+  dark: {
+    blue:"#38bdf8", violet:"#a78bfa", green:"#34d399",
+    amber:"#fbbf24", pink:"#f472b6", orange:"#fb923c",
+    indigo:"#818cf8", lime:"#4ade80", yellow:"#facc15",
+    teal:"#2dd4bf", red:"#f87171", fuchsia:"#e879f9", slate:"#94a3b8",
+  },
+  light: {
+    blue:"#0284c7", violet:"#7c3aed", green:"#059669",
+    amber:"#d97706", pink:"#db2777", orange:"#ea580c",
+    indigo:"#4338ca", lime:"#16a34a", yellow:"#ca8a04",
+    teal:"#0d9488", red:"#dc2626", fuchsia:"#a21caf", slate:"#64748b",
   },
 };
 
 // ============================================================
 // UTILITIES
 // ============================================================
-
-const inferTopic = (problem) => {
-  const text = `${problem.title} ${problem.problem_statement} ${problem.pattern_explanation} ${problem.trigger_phrase}`.toLowerCase();
-  if (/grid|matrix|board|island|ocean|orange|room|gate|path|flood|pacific|atlantic|cell|submatrix|submatrices/.test(text)) return "Grid";
-  if (/string|substring|anagram|palindrome|character|word|decode|calculator|prefix/.test(text)) return "String";
+const inferTopic = (p) => {
+  const t = `${p.title} ${p.problem_statement} ${p.pattern_explanation} ${p.trigger_phrase}`.toLowerCase();
+  if (/grid|matrix|board|island|ocean|orange|room|gate|path|flood|pacific|atlantic|cell|submatrix|submatrices/.test(t)) return "Grid";
+  if (/string|substring|anagram|palindrome|character|word|decode|calculator|prefix/.test(t)) return "String";
   return "Array";
 };
 
-const inferPatternFamily = (problem) => {
-  const text = `${problem.title} ${problem.pattern_explanation} ${problem.trigger_phrase} ${problem.detailed_solution}`.toLowerCase();
-  if (/sliding window|window/.test(text)) return "Sliding Window";
-  if (/prefix sum|difference array|remainder/.test(text)) return "Prefix / Difference";
-  if (/hashmap|hash set|hash set|set\b|map\b/.test(text)) return "Hashing";
-  if (/two pointers|slow-fast|pointers/.test(text)) return "Two Pointers";
-  if (/monotonic stack|stack|deque/.test(text)) return "Stack / Deque";
-  if (/heap|priority queue|top-k|top k/.test(text)) return "Heap / Priority Queue";
-  if (/binary search/.test(text)) return "Binary Search";
-  if (/greedy|interval|sweep/.test(text)) return "Greedy / Intervals";
-  if (/dfs|bfs|flood fill|multi-source bfs|connected component/.test(text)) return "DFS / BFS";
-  if (/dynamic programming|\bdp\b/.test(text)) return "Dynamic Programming";
-  if (/backtracking/.test(text)) return "Backtracking";
-  if (/simulation/.test(text)) return "Simulation";
+const inferPatternFamily = (p) => {
+  const t = `${p.title} ${p.pattern_explanation} ${p.trigger_phrase} ${p.detailed_solution}`.toLowerCase();
+  if (/sliding window|window/.test(t)) return "Sliding Window";
+  if (/prefix sum|difference array|remainder/.test(t)) return "Prefix / Difference";
+  if (/hashmap|hash set|set\b|map\b/.test(t)) return "Hashing";
+  if (/two pointers|slow-fast|pointers/.test(t)) return "Two Pointers";
+  if (/monotonic stack|stack|deque/.test(t)) return "Stack / Deque";
+  if (/heap|priority queue|top-k|top k/.test(t)) return "Heap / Priority Queue";
+  if (/binary search/.test(t)) return "Binary Search";
+  if (/greedy|interval|sweep/.test(t)) return "Greedy / Intervals";
+  if (/dfs|bfs|flood fill|multi-source bfs|connected component/.test(t)) return "DFS / BFS";
+  if (/dynamic programming|\bdp\b/.test(t)) return "Dynamic Programming";
+  if (/backtracking/.test(t)) return "Backtracking";
+  if (/simulation/.test(t)) return "Simulation";
   return "Core Pattern";
 };
 
 const extractComplexity = (text) => {
-  const timeMatch = text.match(/Time:\s*\*\*(.*?)\*\*/i);
-  const spaceMatch = text.match(/Space:\s*\*\*(.*?)\*\*/i);
-  return {
-    time: timeMatch ? timeMatch[1] : "O(N)",
-    space: spaceMatch ? spaceMatch[1] : "O(1)",
-  };
+  const tm = text.match(/Time:\s*\*\*(.*?)\*\*/i);
+  const sm = text.match(/Space:\s*\*\*(.*?)\*\*/i);
+  return { time: tm ? tm[1] : "O(N)", space: sm ? sm[1] : "O(1)" };
 };
 
-const TOPIC_META = {
-  Array: { color: "#38bdf8", glow: "rgba(56,189,248,0.3)", bg: "rgba(56,189,248,0.08)", emoji: "⬡" },
-  String: { color: "#a78bfa", glow: "rgba(167,139,250,0.3)", bg: "rgba(167,139,250,0.08)", emoji: "⬡" },
-  Grid: { color: "#34d399", glow: "rgba(52,211,153,0.3)", bg: "rgba(52,211,153,0.08)", emoji: "⬡" },
-};
+const getFamilyColor = (family, a) => ({
+  "Sliding Window":       a.amber,
+  "Prefix / Difference":  a.indigo,
+  "Hashing":              a.blue,
+  "Two Pointers":         a.pink,
+  "Stack / Deque":        a.orange,
+  "Heap / Priority Queue":a.fuchsia,
+  "Binary Search":        a.lime,
+  "Greedy / Intervals":   a.yellow,
+  "DFS / BFS":            a.teal,
+  "Dynamic Programming":  a.red,
+  "Backtracking":         a.fuchsia,
+  "Simulation":           a.slate,
+  "Core Pattern":         a.slate,
+}[family] || a.slate);
 
-const FAMILY_COLORS = {
-  "Sliding Window": "#f59e0b",
-  "Prefix / Difference": "#818cf8",
-  "Hashing": "#38bdf8",
-  "Two Pointers": "#f472b6",
-  "Stack / Deque": "#fb923c",
-  "Heap / Priority Queue": "#c084fc",
-  "Binary Search": "#4ade80",
-  "Greedy / Intervals": "#facc15",
-  "DFS / BFS": "#2dd4bf",
-  "Dynamic Programming": "#f87171",
-  "Backtracking": "#e879f9",
-  "Simulation": "#94a3b8",
-  "Core Pattern": "#64748b",
-};
+const getTopicMeta = (topic, a) => ({
+  Array:  { color: a.blue,   glow: `${a.blue}60`   },
+  String: { color: a.violet, glow: `${a.violet}60`  },
+  Grid:   { color: a.green,  glow: `${a.green}60`   },
+}[topic] || { color: a.blue, glow: `${a.blue}60` });
 
-const THEME_TOKENS = {
-  dark: {
-    bg: "#050811",
-    textMain: "rgba(203,213,225,0.9)",
-    textHeading: "#f1f5f9",
-    textMuted: "#94a3b8",
-    textDim: "#475569",
-    headerBg: "rgba(5,8,17,0.85)",
-    sidebarBg: "rgba(8,12,24,0.95)",
-    cardBg: "rgba(255,255,255,0.02)",
-    cardHover: "rgba(255,255,255,0.05)",
-    border: "rgba(255,255,255,0.06)",
-    borderStrong: "rgba(255,255,255,0.1)",
-    inputBg: "rgba(255,255,255,0.04)",
-    overlay: "rgba(0,0,0,0.7)",
-    meshOpacity1: 0.07,
-    meshOpacity2: 0.07,
-    meshOpacity3: 0.05,
-    gridOpacity: 0.015,
-    tagBg: "rgba(255,255,255,0.06)",
-    subHeader: "#1e293b",
-  },
-  light: {
-    bg: "#f8fafc",
-    textMain: "#475569",
-    textHeading: "#0f172a",
-    textMuted: "#64748b",
-    textDim: "#94a3b8",
-    headerBg: "rgba(255,255,255,0.85)",
-    sidebarBg: "#f1f5f9",
-    cardBg: "rgba(255,255,255,0.7)",
-    cardHover: "rgba(255,255,255,1)",
-    border: "rgba(0,0,0,0.08)",
-    borderStrong: "rgba(0,0,0,0.15)",
-    inputBg: "rgba(0,0,0,0.03)",
-    overlay: "rgba(0,0,0,0.3)",
-    meshOpacity1: 0.04,
-    meshOpacity2: 0.04,
-    meshOpacity3: 0.03,
-    gridOpacity: 0.04,
-    tagBg: "rgba(0,0,0,0.05)",
-    subHeader: "#e2e8f0",
-  }
+// ============================================================
+// THEME CONTEXT
+// ============================================================
+const ThemeCtx = React.createContext({ mode: "dark", th: THEMES.dark, a: ACCENTS.dark });
+const useTheme = () => React.useContext(ThemeCtx);
+
+// ============================================================
+// GLOBAL STYLES
+// ============================================================
+const GlobalStyles = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Outfit:wght@700;800;900&display=swap');
+    *, *::before, *::after { box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0; }
+
+    @keyframes meshFloat1  { 0%,100%{transform:translate(0,0)scale(1)}   50%{transform:translate(3%,5%)scale(1.1)} }
+    @keyframes meshFloat2  { 0%,100%{transform:translate(0,0)scale(1)}   50%{transform:translate(-3%,-3%)scale(1.08)} }
+    @keyframes meshFloat3  { 0%,100%{transform:translate(0,0)scale(1)}   50%{transform:translate(4%,-4%)scale(1.05)} }
+    @keyframes fadeSlideIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes fadeIn      { from{opacity:0} to{opacity:1} }
+    @keyframes spin        { to{transform:rotate(360deg)} }
+
+    ::-webkit-scrollbar       { width:4px; height:4px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--scrollbar,rgba(128,128,128,0.2)); border-radius:4px; }
+
+    .dsa-root { font-family:'Inter',system-ui,sans-serif; }
+    .card-lift { transition:transform 0.18s, box-shadow 0.18s; }
+    .card-lift:hover { transform:translateY(-1px); }
+    .btn-base { cursor:pointer; border:none; background:none; font-family:inherit; }
+    .btn-base:disabled { cursor:not-allowed; }
+    .btn-hover { transition:all 0.14s; cursor:pointer; }
+    .btn-hover:hover { filter:brightness(1.08); }
+    .prob-item { transition:background 0.12s, border-color 0.1s; }
+    .section-content { overflow:hidden; transition:max-height 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s; }
+    .section-content.closed { max-height:0 !important; opacity:0; }
+    .section-content.open   { opacity:1; }
+
+    @media(max-width:768px) {
+      .dsa-sidebar {
+        position:fixed !important; left:0 !important; top:0 !important; bottom:0 !important;
+        z-index:200 !important; transform:translateX(-100%);
+        transition:transform 0.27s cubic-bezier(0.4,0,0.2,1) !important;
+      }
+      .dsa-sidebar.open { transform:translateX(0) !important; }
+      .hide-mobile { display:none !important; }
+      .show-mobile { display:flex !important; }
+    }
+    @media(min-width:769px) { .show-mobile { display:none !important; } }
+  `}</style>
+);
+
+// ============================================================
+// BACKGROUND MESH
+// ============================================================
+const BackgroundMesh = () => {
+  const { th } = useTheme();
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:0, pointerEvents:"none", overflow:"hidden" }}>
+      <div style={{ position:"absolute", top:"-20%", left:"-10%", width:"55%", height:"55%",
+        background:`radial-gradient(circle, ${th.mesh1} 0%, transparent 70%)`, animation:"meshFloat1 12s ease-in-out infinite" }} />
+      <div style={{ position:"absolute", bottom:"-15%", right:"-10%", width:"50%", height:"50%",
+        background:`radial-gradient(circle, ${th.mesh2} 0%, transparent 70%)`, animation:"meshFloat2 15s ease-in-out infinite" }} />
+      <div style={{ position:"absolute", top:"40%", right:"20%", width:"30%", height:"30%",
+        background:`radial-gradient(circle, ${th.mesh3} 0%, transparent 70%)`, animation:"meshFloat3 18s ease-in-out infinite" }} />
+      <div style={{ position:"absolute", inset:0,
+        backgroundImage:`linear-gradient(${th.gridLine} 1px,transparent 1px),linear-gradient(90deg,${th.gridLine} 1px,transparent 1px)`,
+        backgroundSize:"48px 48px" }} />
+    </div>
+  );
 };
 
 // ============================================================
-// SUB-COMPONENTS
+// CONFETTI
 // ============================================================
+const Confetti = ({ active, onDone }) => {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    if (!active) return;
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const particles = Array.from({ length: 90 }, () => ({
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height * 0.5,
+      r: Math.random() * 6 + 3,
+      color: ["#38bdf8","#34d399","#a78bfa","#fbbf24","#f472b6","#fb923c"][Math.floor(Math.random()*6)],
+      tiltAngle: 0, tiltInc: Math.random() * 0.07 + 0.05, tilt: 0, vy: Math.random() * 3 + 2,
+    }));
+    let frame, elapsed = 0;
+    const run = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.tiltAngle += p.tiltInc; p.y += p.vy; p.tilt = Math.sin(p.tiltAngle) * 15;
+        ctx.beginPath(); ctx.lineWidth = p.r; ctx.strokeStyle = p.color;
+        ctx.moveTo(p.x + p.tilt + p.r/2, p.y); ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r/2);
+        ctx.stroke();
+      });
+      if (++elapsed < 110) frame = requestAnimationFrame(run);
+      else { ctx.clearRect(0,0,canvas.width,canvas.height); onDone?.(); }
+    };
+    frame = requestAnimationFrame(run);
+    return () => cancelAnimationFrame(frame);
+  }, [active]);
+  return <canvas ref={canvasRef} style={{ position:"fixed", inset:0, zIndex:999, pointerEvents:"none" }} />;
+};
 
-const RichText = ({ text, tokens, className = "" }) => {
+// ============================================================
+// ATOMS
+// ============================================================
+const RichText = ({ text }) => {
+  const { th } = useTheme();
   if (!text) return null;
   const parts = text.split(/(\*\*.*?\*\*)/g);
   return (
-    <p className={`leading-relaxed ${className}`} style={{ fontSize: "15px", color: tokens.textMain }}>
-      {parts.map((part, i) =>
-        part.startsWith("**") && part.endsWith("**")
-          ? <strong key={i} style={{ color: tokens.textHeading, fontWeight: 700 }}>{part.slice(2, -2)}</strong>
-          : part
+    <p style={{ fontSize:15, lineHeight:1.78, color:th.textSecondary, margin:0 }}>
+      {parts.map((p, i) =>
+        p.startsWith("**") && p.endsWith("**")
+          ? <strong key={i} style={{ color:th.textPrimary, fontWeight:700 }}>{p.slice(2,-2)}</strong>
+          : p
       )}
     </p>
   );
 };
 
-const Pill = ({ children, color = "#38bdf8" }) => (
-  <span style={{
-    display: "inline-flex", alignItems: "center", gap: 4,
-    padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700,
-    border: `1px solid ${color}30`, background: `${color}12`, color,
-    letterSpacing: "0.04em"
-  }}>{children}</span>
+const Pill = ({ children, color }) => (
+  <span style={{ display:"inline-flex", alignItems:"center", padding:"2px 10px", borderRadius:999,
+    fontSize:11, fontWeight:700, letterSpacing:"0.04em",
+    border:`1px solid ${color}38`, background:`${color}1a`, color }}>
+    {children}
+  </span>
 );
 
 const StatusDot = ({ status }) => {
+  const { th } = useTheme();
   const cfg = {
-    solved: { color: "#34d399", shadow: "rgba(52,211,153,0.6)" },
-    attempted: { color: "#fbbf24", shadow: "rgba(251,191,36,0.6)" },
-    todo: { color: "#475569", shadow: "transparent" },
+    solved:   { c:"#34d399", g:"rgba(52,211,153,0.6)"  },
+    attempted:{ c:"#fbbf24", g:"rgba(251,191,36,0.6)"   },
+    todo:     { c:th.statusTodo, g:"transparent" },
   };
-  const c = cfg[status] || cfg.todo;
+  const { c, g } = cfg[status] || cfg.todo;
+  return <span style={{ display:"inline-block", width:8, height:8, borderRadius:"50%", background:c, boxShadow:`0 0 8px ${g}`, flexShrink:0 }} />;
+};
+
+const ComplexityChip = ({ label, value, color }) => {
+  const { th } = useTheme();
   return (
-    <span style={{
-      display: "inline-block", width: 8, height: 8, borderRadius: "50%",
-      background: c.color, boxShadow: `0 0 8px ${c.shadow}`, flexShrink: 0
-    }} />
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", padding:"8px 14px",
+      background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:12, boxShadow:th.shadowCard }}>
+      <span style={{ fontSize:10, color:th.textFaint, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:2 }}>{label}</span>
+      <span style={{ fontSize:13, fontWeight:800, fontFamily:"Space Mono", color }}>{value}</span>
+    </div>
   );
 };
 
-const ComplexityChip = ({ label, value, color, tokens }) => (
-  <div style={{
-    display: "flex", flexDirection: "column", alignItems: "center",
-    padding: "8px 16px", background: tokens.tagBg,
-    border: `1px solid ${tokens.border}`, borderRadius: 12
-  }}>
-    <span style={{ fontSize: 10, color: tokens.textDim, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 2 }}>{label}</span>
-    <span style={{ fontSize: 13, fontWeight: 800, fontFamily: "monospace", color }}>{value}</span>
-  </div>
-);
-
-// Animated background mesh
-const BackgroundMesh = ({ tokens }) => (
-  <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
-    <div style={{
-      position: "absolute", top: "-20%", left: "-10%", width: "55%", height: "55%",
-      background: `radial-gradient(circle, rgba(56,189,248,${tokens.meshOpacity1}) 0%, transparent 70%)`,
-      animation: "meshFloat1 12s ease-in-out infinite"
-    }} />
-    <div style={{
-      position: "absolute", bottom: "-15%", right: "-10%", width: "50%", height: "50%",
-      background: `radial-gradient(circle, rgba(167,139,250,${tokens.meshOpacity2}) 0%, transparent 70%)`,
-      animation: "meshFloat2 15s ease-in-out infinite"
-    }} />
-    <div style={{
-      position: "absolute", top: "40%", right: "20%", width: "30%", height: "30%",
-      background: `radial-gradient(circle, rgba(52,211,153,${tokens.meshOpacity3}) 0%, transparent 70%)`,
-      animation: "meshFloat3 18s ease-in-out infinite"
-    }} />
-    {/* Grid pattern */}
-    <div style={{
-      position: "absolute", inset: 0,
-      backgroundImage: `linear-gradient(${tokens.border}40 1px, transparent 1px), linear-gradient(90deg, ${tokens.border}40 1px, transparent 1px)`,
-      backgroundSize: "48px 48px", opacity: tokens.gridOpacity
-    }} />
-  </div>
-);
-
-// Confetti burst on solve
-const Confetti = ({ active, onDone }) => {
-  const canvasRef = useRef(null);
-  useEffect(() => {
-    if (!active) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const particles = Array.from({ length: 80 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height * 0.4,
-      r: Math.random() * 6 + 3,
-      d: Math.random() * 80,
-      color: ["#38bdf8","#34d399","#a78bfa","#fbbf24","#f472b6"][Math.floor(Math.random()*5)],
-      tilt: Math.random() * 10 - 10,
-      tiltAngleIncrement: Math.random() * 0.07 + 0.05,
-      tiltAngle: 0,
-      vy: Math.random() * 3 + 2
-    }));
-    let frame;
-    let elapsed = 0;
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        p.tiltAngle += p.tiltAngleIncrement;
-        p.y += p.vy;
-        p.tilt = Math.sin(p.tiltAngle) * 15;
-        ctx.beginPath();
-        ctx.lineWidth = p.r;
-        ctx.strokeStyle = p.color;
-        ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
-        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
-        ctx.stroke();
-      });
-      elapsed++;
-      if (elapsed < 100) frame = requestAnimationFrame(animate);
-      else { ctx.clearRect(0, 0, canvas.width, canvas.height); onDone?.(); }
-    };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
-  }, [active]);
-  return <canvas ref={canvasRef} style={{ position: "fixed", inset: 0, zIndex: 999, pointerEvents: "none" }} />;
-};
-
-// Circular progress ring
-const CircleProgress = ({ pct, size = 80, stroke = 6, color = "#38bdf8", tokens, children }) => {
+const CircleProgress = ({ pct, size=110, stroke=8, color, children }) => {
+  const { th } = useTheme();
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
-  const dash = (pct / 100) * circ;
   return (
-    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={tokens.tagBg} strokeWidth={stroke} />
+    <div style={{ position:"relative", width:size, height:size, flexShrink:0 }}>
+      <svg width={size} height={size} style={{ transform:"rotate(-90deg)" }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={th.barTrack} strokeWidth={stroke} />
         <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
-          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-          style={{ transition: "stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)", filter: `drop-shadow(0 0 6px ${color})` }}
-        />
+          strokeDasharray={`${(pct/100)*circ} ${circ}`} strokeLinecap="round"
+          style={{ transition:"stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)", filter:`drop-shadow(0 0 6px ${color})` }} />
       </svg>
-      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {children}
-      </div>
+      <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>{children}</div>
     </div>
+  );
+};
+
+const ThemeToggle = ({ mode, onToggle }) => {
+  const { th } = useTheme();
+  return (
+    <button onClick={onToggle} className="btn-hover" title={`Switch to ${mode==="dark"?"light":"dark"} mode`}
+      style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px",
+        background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:10,
+        color:th.textMuted, fontSize:12, fontWeight:700, cursor:"pointer",
+        boxShadow:th.shadowCard, userSelect:"none" }}>
+      <span style={{ fontSize:15 }}>{mode==="dark" ? "☀️" : "🌙"}</span>
+      <span>{mode==="dark" ? "Light" : "Dark"}</span>
+    </button>
   );
 };
 
 // ============================================================
 // MAIN APP
 // ============================================================
-
 export default function App() {
-  const [progress, setProgress] = useState({});
-  const [theme, setTheme] = useState("dark");
-  const [storageReady, setStorageReady] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filterTopic, setFilterTopic] = useState("All");
-  const [filterStatus, setFilterStatus] = useState("All");
-  const [filterFamily, setFilterFamily] = useState("All");
-  const [selectedId, setSelectedId] = useState(1);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("detail"); // detail | stats
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [syncStatus, setSyncStatus] = useState("idle"); // idle | saving | saved
-  const [expandedSections, setExpandedSections] = useState({ problem: true, pattern: true, trigger: true, solution: true, remarks: true });
-  const listRef = useRef(null);
-  const syncTimer = useRef(null);
+  const [mode, setMode] = useState(() => {
+    try { return localStorage.getItem("dsa_theme") || "dark"; } catch { return "dark"; }
+  });
+  const th = THEMES[mode];
+  const a  = ACCENTS[mode];
 
-  const tokens = THEME_TOKENS[theme];
-
-  // Load state from storage
-  useEffect(() => {
-    Promise.all([
-      storage.get("dsa_progress_v2"),
-      storage.get("dsa_theme_v2")
-    ]).then(([progressData, themeData]) => {
-      if (progressData) setProgress(progressData);
-      if (themeData) setTheme(themeData);
-      setStorageReady(true);
-    });
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setTheme(prev => {
-      const next = prev === "dark" ? "light" : "dark";
-      storage.set("dsa_theme_v2", next);
+  const toggleMode = useCallback(() => {
+    setMode(m => {
+      const next = m === "dark" ? "light" : "dark";
+      try { localStorage.setItem("dsa_theme", next); } catch {}
       return next;
     });
   }, []);
 
-  // Save progress to storage with debounce
-  const saveProgress = useCallback(async (newProgress) => {
+  const [progress,    setProgress]    = useState({});
+  const [search,      setSearch]      = useState("");
+  const [filterTopic, setFilterTopic] = useState("All");
+  const [filterStatus,setFilterStatus]= useState("All");
+  const [filterFamily,setFilterFamily]= useState("All");
+  const [selectedId,  setSelectedId]  = useState(1);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeTab,   setActiveTab]   = useState("detail");
+  const [confetti,    setConfetti]    = useState(false);
+  const [syncStatus,  setSyncStatus]  = useState("idle");
+  const [expanded, setExpanded] = useState({ problem:true, pattern:true, trigger:true, solution:true, remarks:true });
+  const syncTimer = useRef(null);
+
+  useEffect(() => {
+    storage.get("dsa_progress_v2").then(data => { if (data) setProgress(data); });
+  }, []);
+
+  const saveProgress = useCallback(async (next) => {
     setSyncStatus("saving");
     clearTimeout(syncTimer.current);
     syncTimer.current = setTimeout(async () => {
-      await storage.set("dsa_progress_v2", newProgress);
+      await storage.set("dsa_progress_v2", next);
       setSyncStatus("saved");
       setTimeout(() => setSyncStatus("idle"), 2000);
     }, 600);
   }, []);
 
   const updateStatus = useCallback((id, status) => {
-    const wasNotSolved = (progress[id]?.status || "todo") !== "solved";
-    const becomingSolved = status === "solved";
+    const wasSolved = progress[id]?.status === "solved";
     setProgress(prev => {
-      const next = { ...prev, [id]: { ...(prev[id] || { remarks: "" }), status } };
-      saveProgress(next);
-      return next;
+      const next = { ...prev, [id]: { ...(prev[id] || { remarks:"" }), status } };
+      saveProgress(next); return next;
     });
-    if (wasNotSolved && becomingSolved) {
-      setShowConfetti(true);
-    }
+    if (!wasSolved && status === "solved") setConfetti(true);
   }, [progress, saveProgress]);
 
   const updateRemarks = useCallback((id, remarks) => {
     setProgress(prev => {
-      const next = { ...prev, [id]: { ...(prev[id] || { status: "todo" }), remarks } };
-      saveProgress(next);
-      return next;
+      const next = { ...prev, [id]: { ...(prev[id] || { status:"todo" }), remarks } };
+      saveProgress(next); return next;
     });
   }, [saveProgress]);
 
-  const problems = useMemo(() => {
-    return handbook.problems.map((p) => ({
-      ...p,
-      topic: inferTopic(p),
-      family: inferPatternFamily(p),
-      complexity: extractComplexity(p.detailed_solution),
-      userState: progress[p.number] || { status: "todo", remarks: "" }
-    }));
-  }, [progress]);
+  const problems = useMemo(() =>
+    handbook.problems.map(p => ({
+      ...p, topic:inferTopic(p), family:inferPatternFamily(p),
+      complexity:extractComplexity(p.detailed_solution),
+      userState: progress[p.number] || { status:"todo", remarks:"" },
+    })), [progress]);
 
   const stats = useMemo(() => {
-    const total = problems.length;
-    const solved = problems.filter(p => p.userState.status === "solved").length;
-    const attempted = problems.filter(p => p.userState.status === "attempted").length;
-    const byTopic = { Array: { solved: 0, total: 0 }, String: { solved: 0, total: 0 }, Grid: { solved: 0, total: 0 } };
+    const total    = problems.length;
+    const solved   = problems.filter(p => p.userState.status === "solved").length;
+    const attempted= problems.filter(p => p.userState.status === "attempted").length;
+    const byTopic  = { Array:{solved:0,total:0}, String:{solved:0,total:0}, Grid:{solved:0,total:0} };
     const byFamily = {};
     problems.forEach(p => {
       byTopic[p.topic].total++;
       if (p.userState.status === "solved") byTopic[p.topic].solved++;
-      if (!byFamily[p.family]) byFamily[p.family] = { solved: 0, total: 0 };
+      if (!byFamily[p.family]) byFamily[p.family] = { solved:0, total:0 };
       byFamily[p.family].total++;
       if (p.userState.status === "solved") byFamily[p.family].solved++;
     });
-    return { total, solved, attempted, todo: total - solved - attempted, pct: Math.round((solved / total) * 100), byTopic, byFamily };
+    return { total, solved, attempted, todo:total-solved-attempted, pct:Math.round((solved/total)*100), byTopic, byFamily };
   }, [problems]);
 
-  const allFamilies = useMemo(() => ["All", ...Object.keys(FAMILY_COLORS)], []);
+  const ALL_FAMILIES = ["All","Sliding Window","Prefix / Difference","Hashing","Two Pointers",
+    "Stack / Deque","Heap / Priority Queue","Binary Search","Greedy / Intervals",
+    "DFS / BFS","Dynamic Programming","Backtracking","Simulation","Core Pattern"];
 
   const filteredProblems = useMemo(() => {
     const q = search.toLowerCase();
     return problems.filter(p => {
-      const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.trigger_phrase.toLowerCase().includes(q) || p.family.toLowerCase().includes(q);
-      const matchesTopic = filterTopic === "All" || p.topic === filterTopic;
-      const matchesStatus = filterStatus === "All" || p.userState.status === filterStatus;
-      const matchesFamily = filterFamily === "All" || p.family === filterFamily;
-      return matchesSearch && matchesTopic && matchesStatus && matchesFamily;
+      const ms = !q || p.title.toLowerCase().includes(q) || p.trigger_phrase.toLowerCase().includes(q) || p.family.toLowerCase().includes(q);
+      const mt = filterTopic  === "All" || p.topic            === filterTopic;
+      const mv = filterStatus === "All" || p.userState.status === filterStatus;
+      const mf = filterFamily === "All" || p.family           === filterFamily;
+      return ms && mt && mv && mf;
     });
   }, [problems, search, filterTopic, filterStatus, filterFamily]);
 
   const selectedProblem = problems.find(p => p.number === selectedId) || problems[0];
 
-  const navigateProblem = useCallback((dir) => {
-    const idx = filteredProblems.findIndex(p => p.number === selectedId);
+  const navigate = useCallback((dir) => {
+    const idx  = filteredProblems.findIndex(p => p.number === selectedId);
     const next = filteredProblems[idx + dir];
     if (next) setSelectedId(next.number);
   }, [filteredProblems, selectedId]);
 
-  const toggleSection = (key) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleExpanded = (k) => setExpanded(prev => ({ ...prev, [k]: !prev[k] }));
 
-  const topicMeta = TOPIC_META[selectedProblem.topic] || TOPIC_META.Array;
-  const familyColor = FAMILY_COLORS[selectedProblem.family] || "#64748b";
+  const resetFilters = () => { setSearch(""); setFilterTopic("All"); setFilterStatus("All"); setFilterFamily("All"); };
 
-  // ============================================================
-  // RENDER
-  // ============================================================
+  const syncColor = syncStatus === "saved" ? a.green : th.textFaint;
+
   return (
-    <div style={{
-      position: "fixed", inset: 0, display: "flex", flexDirection: "column",
-      background: tokens.bg, color: tokens.textMain, fontFamily: "'Inter', system-ui, sans-serif",
-      overflow: "hidden", transition: "background 0.3s, color 0.3s"
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&family=Outfit:wght@700;800;900&display=swap');
-        
-        @keyframes meshFloat1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(3%,5%) scale(1.1)} }
-        @keyframes meshFloat2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-3%,-3%) scale(1.08)} }
-        @keyframes meshFloat3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(4%,-4%) scale(1.05)} }
-        @keyframes fadeSlideIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-        @keyframes spin { to{transform:rotate(360deg)} }
-        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-        
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: ${theme === "dark" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.1)"}; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
-        
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        .card-hover { transition: all 0.2s; }
-        .card-hover:hover { background: rgba(255,255,255,0.05) !important; transform: translateY(-1px); }
-        
-        .problem-item { transition: all 0.15s; }
-        .problem-item:hover { background: rgba(255,255,255,0.04) !important; }
-        
-        .btn-status { transition: all 0.15s; cursor: pointer; }
-        .btn-status:hover { filter: brightness(1.2); }
-        
-        .sidebar-overlay { display:none; }
-        
-        @media(max-width:768px) {
-          .desktop-sidebar { 
-            position: fixed !important; left: 0 !important; top: 0 !important; bottom: 0 !important;
-            z-index: 200 !important; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1) !important;
-          }
-          .desktop-sidebar.open { transform: translateX(0) !important; }
-          .sidebar-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 199; }
-          .main-header-title { font-size: 15px !important; }
-        }
-        
-        .section-content { overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.3s; }
-        .section-content.collapsed { max-height: 0 !important; opacity: 0; }
-        .section-content.expanded { opacity: 1; }
-        
-        textarea:focus { outline: none; }
-        input:focus { outline: none; }
-        select:focus { outline: none; }
-      `}</style>
+    <ThemeCtx.Provider value={{ mode, th, a }}>
+      <GlobalStyles />
+      <BackgroundMesh />
+      <Confetti active={confetti} onDone={() => setConfetti(false)} />
 
-      <BackgroundMesh tokens={tokens} />
-      <Confetti active={showConfetti} onDone={() => setShowConfetti(false)} />
-
-      {/* ── HEADER ── */}
-      <header style={{
-        flexShrink: 0, position: "relative", zIndex: 50,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "0 20px", height: 60,
-        background: tokens.headerBg, backdropFilter: "blur(24px)",
-        borderBottom: `1px solid ${tokens.border}`
+      <div className="dsa-root" style={{
+        position:"fixed", inset:0, display:"flex", flexDirection:"column",
+        background:th.bgRoot, color:th.textPrimary,
+        transition:"background 0.3s, color 0.3s"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {/* Hamburger for mobile */}
-          <button onClick={() => setSidebarOpen(v => !v)} style={{
-            display: "none", background: "rgba(255,255,255,0.06)", border: "none",
-            borderRadius: 8, padding: "6px 8px", cursor: "pointer", color: "#94a3b8",
-            "@media(max-width:768px)": { display: "flex" }
-          }} className="mobile-menu-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
-            </svg>
-          </button>
-          <div style={{
-            width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-            background: "linear-gradient(135deg, #38bdf8, #6366f1)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 0 20px rgba(56,189,248,0.3)"
-          }}>
-            <span style={{ fontSize: 16, fontWeight: 900, color: "#fff", fontFamily: "Outfit" }}>D</span>
-          </div>
-          <div>
-            <div className="main-header-title" style={{ fontFamily: "Outfit", fontWeight: 900, fontSize: 17, letterSpacing: "-0.03em", color: tokens.textHeading }}>
-              PatternAtlas <span style={{ color: "#38bdf8" }}>DSA</span>
-            </div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", color: tokens.textDim, textTransform: "uppercase" }}>100 Problems Handbook</div>
-          </div>
-        </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          {/* Theme Toggle */}
-          <button onClick={toggleTheme} style={{
-            background: tokens.tagBg, border: `1px solid ${tokens.border}`,
-            borderRadius: 10, width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", color: theme === "dark" ? "#fbbf24" : "#6366f1", transition: "all 0.2s"
-          }} title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>
-            {theme === "dark" ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            )}
-          </button>
-
-          {/* Sync indicator */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: syncStatus === "saved" ? "#34d399" : tokens.textDim }}>
-            {syncStatus === "saving" && <div style={{ width: 10, height: 10, border: "2px solid #38bdf8", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />}
-            {syncStatus === "saved" && <span>✓</span>}
-            {syncStatus === "saving" ? "Syncing..." : syncStatus === "saved" ? "Saved" : ""}
-          </div>
-
-          {/* Stats bar */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11, color: "#64748b" }}>Progress</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#38bdf8", fontFamily: "Space Mono" }}>{stats.pct}%</span>
-              </div>
-              <div style={{ width: 140, height: 3, background: "rgba(255,255,255,0.06)", borderRadius: 99, overflow: "hidden" }}>
-                <div style={{
-                  height: "100%", borderRadius: 99,
-                  width: `${stats.pct}%`,
-                  background: "linear-gradient(90deg, #38bdf8, #6366f1)",
-                  transition: "width 1s cubic-bezier(0.4,0,0.2,1)",
-                  boxShadow: "0 0 8px rgba(56,189,248,0.5)"
-                }} />
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              {[
-                { val: stats.solved, label: "Solved", color: "#34d399" },
-                { val: stats.attempted, label: "Tried", color: "#fbbf24" },
-                { val: stats.todo, label: "Todo", color: "#475569" },
-              ].map(s => (
-                <div key={s.label} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: s.color, fontFamily: "Space Mono", lineHeight: 1 }}>{s.val}</div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.1em", marginTop: 2 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Stats tab toggle (mobile) */}
-          <button onClick={() => setActiveTab(t => t === "stats" ? "detail" : "stats")} style={{
-            background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 8, padding: "6px 12px", cursor: "pointer", color: "#94a3b8",
-            fontSize: 11, fontWeight: 700
-          }}>
-            {activeTab === "stats" ? "← Back" : "Stats"}
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile hamburger styles via js */}
-      <style>{`@media(max-width:768px){.mobile-menu-btn{display:flex!important;}}`}</style>
-
-      {/* ── BODY ── */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden", position: "relative", zIndex: 1 }}>
-
-        {/* Mobile overlay */}
-        {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
-
-        {/* ── SIDEBAR ── */}
-        <aside className={`desktop-sidebar ${sidebarOpen ? "open" : ""}`} style={{
-          width: 340, flexShrink: 0, display: "flex", flexDirection: "column",
-          background: tokens.sidebarBg, backdropFilter: "blur(24px)",
-          borderRight: `1px solid ${tokens.border}`
+        {/* ── HEADER ── */}
+        <header style={{
+          flexShrink:0, zIndex:50,
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          padding:"0 16px", height:58,
+          background:th.bgHeader, backdropFilter:"blur(20px)",
+          borderBottom:`1px solid ${th.borderSubtle}`,
+          boxShadow: mode==="light" ? "0 1px 0 rgba(0,0,0,0.07)" : "none",
         }}>
-          {/* Sidebar header / filters */}
-          <div style={{ padding: "14px 14px 10px", flexShrink: 0 }}>
-            {/* Search */}
-            <div style={{ position: "relative", marginBottom: 10 }}>
-              <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#475569" }} width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <input type="text" placeholder="Search problems, patterns..."
-                value={search} onChange={e => setSearch(e.target.value)}
-                style={{
-                  width: "100%", background: tokens.inputBg, border: `1px solid ${tokens.border}`,
-                  borderRadius: 10, padding: "9px 12px 9px 34px", fontSize: 13, color: tokens.textMain,
-                  transition: "all 0.2s"
-                }}
-                onFocus={e => e.target.style.borderColor = "rgba(56,189,248,0.4)"}
-                onBlur={e => e.target.style.borderColor = tokens.border}
-              />
-              {search && (
-                <button onClick={() => setSearch("")} style={{
-                  position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)",
-                  background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 14
-                }}>✕</button>
-              )}
+          {/* Left */}
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <button className="btn-base show-mobile" style={{ display:"none" }}
+              onClick={() => setSidebarOpen(v => !v)}>
+              <div style={{ background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:8,
+                padding:"6px 8px", display:"flex", color:th.textMuted }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+                </svg>
+              </div>
+            </button>
+
+            <div style={{ width:34, height:34, borderRadius:10, flexShrink:0,
+              background:"linear-gradient(135deg,#38bdf8,#6366f1)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              boxShadow:"0 0 18px rgba(56,189,248,0.35)" }}>
+              <span style={{ fontSize:16, fontWeight:900, color:"#fff", fontFamily:"Outfit" }}>D</span>
             </div>
 
-            {/* Topic filters */}
-            <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-              {["All", "Array", "String", "Grid"].map(t => {
-                const active = filterTopic === t;
-                const meta = TOPIC_META[t];
+            <div>
+              <div style={{ fontFamily:"Outfit", fontWeight:900, fontSize:16, letterSpacing:"-0.03em", color:th.textPrimary }}>
+                PatternAtlas <span style={{ color:a.blue }}>DSA</span>
+              </div>
+              <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.14em", color:th.textFaint, textTransform:"uppercase" }}>
+                100 Problems Handbook
+              </div>
+            </div>
+          </div>
+
+          {/* Right */}
+          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+            {syncStatus !== "idle" && (
+              <span style={{ fontSize:11, fontWeight:700, color:syncColor, display:"flex", alignItems:"center", gap:5 }}>
+                {syncStatus === "saving" && (
+                  <span style={{ width:10, height:10, border:`2px solid ${a.blue}`, borderTopColor:"transparent",
+                    borderRadius:"50%", animation:"spin 0.6s linear infinite", display:"inline-block" }} />
+                )}
+                {syncStatus === "saving" ? "Syncing…" : "✓ Saved"}
+              </span>
+            )}
+
+            {/* Stats bar — hide on mobile */}
+            <div className="hide-mobile" style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:3 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:11, color:th.textFaint }}>Progress</span>
+                  <span style={{ fontSize:13, fontWeight:800, color:a.blue, fontFamily:"Space Mono" }}>{stats.pct}%</span>
+                </div>
+                <div style={{ width:130, height:3, background:th.barTrack, borderRadius:99, overflow:"hidden" }}>
+                  <div style={{ height:"100%", width:`${stats.pct}%`,
+                    background:`linear-gradient(90deg,${a.blue},${a.violet})`,
+                    borderRadius:99, transition:"width 1s cubic-bezier(0.4,0,0.2,1)",
+                    boxShadow:`0 0 8px ${a.blue}80` }} />
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:12 }}>
+                {[{v:stats.solved,l:"Solved",c:a.green},{v:stats.attempted,l:"Tried",c:a.amber},{v:stats.todo,l:"Todo",c:th.textFaint}].map(s => (
+                  <div key={s.l} style={{ textAlign:"center" }}>
+                    <div style={{ fontSize:15, fontWeight:800, color:s.c, fontFamily:"Space Mono", lineHeight:1 }}>{s.v}</div>
+                    <div style={{ fontSize:9, fontWeight:700, color:th.textXFaint, textTransform:"uppercase", letterSpacing:"0.1em", marginTop:2 }}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <ThemeToggle mode={mode} onToggle={toggleMode} />
+
+            <button className="btn-hover hide-mobile" onClick={() => setActiveTab(v => v==="stats"?"detail":"stats")}
+              style={{ background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:10,
+                padding:"6px 14px", color:th.textMuted, fontSize:11, fontWeight:700, cursor:"pointer",
+                boxShadow:th.shadowCard }}>
+              {activeTab === "stats" ? "← Study" : "📊 Stats"}
+            </button>
+          </div>
+        </header>
+
+        {/* ── BODY ── */}
+        <div style={{ flex:1, display:"flex", overflow:"hidden", position:"relative", zIndex:1 }}>
+
+          {/* Mobile overlay */}
+          {sidebarOpen && (
+            <div onClick={() => setSidebarOpen(false)}
+              style={{ position:"fixed", inset:0, background:th.overlay, zIndex:199,
+                display:"none" }} className="show-mobile" />
+          )}
+
+          {/* ── SIDEBAR ── */}
+          <aside className={`dsa-sidebar ${sidebarOpen ? "open" : ""}`} style={{
+            width:330, flexShrink:0, display:"flex", flexDirection:"column",
+            background:th.bgSidebar, backdropFilter:"blur(24px)",
+            borderRight:`1px solid ${th.borderSubtle}`,
+          }}>
+            {/* Filters */}
+            <div style={{ padding:"12px 12px 8px", flexShrink:0, borderBottom:`1px solid ${th.borderSubtle}` }}>
+              {/* Search */}
+              <div style={{ position:"relative", marginBottom:10 }}>
+                <svg style={{ position:"absolute", left:11, top:"50%", transform:"translateY(-50%)",
+                  color:th.textFaint, pointerEvents:"none", flexShrink:0 }}
+                  width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" placeholder="Search problems, patterns…" value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ width:"100%", background:th.bgInput, border:`1px solid ${th.borderInput}`,
+                    borderRadius:10, padding:"8px 32px 8px 32px", fontSize:13, color:th.textPrimary,
+                    fontFamily:"inherit", transition:"border-color 0.2s",
+                    boxShadow: mode==="light" ? "0 1px 3px rgba(0,0,0,0.06)" : "none" }}
+                  onFocus={e => e.target.style.borderColor = th.borderFocus}
+                  onBlur={e  => e.target.style.borderColor = th.borderInput}
+                />
+                {search && (
+                  <button onClick={() => setSearch("")} style={{ position:"absolute", right:10, top:"50%",
+                    transform:"translateY(-50%)", background:"none", border:"none",
+                    color:th.textFaint, cursor:"pointer", fontSize:13 }}>✕</button>
+                )}
+              </div>
+
+              {/* Topic filter */}
+              <div style={{ display:"flex", gap:4, marginBottom:8 }}>
+                {["All","Array","String","Grid"].map(tp => {
+                  const col = { Array:a.blue, String:a.violet, Grid:a.green }[tp] || a.blue;
+                  const active = filterTopic === tp;
+                  return (
+                    <button key={tp} className="btn-hover" onClick={() => setFilterTopic(tp)} style={{
+                      flex:1, padding:"5px 4px", borderRadius:8, fontSize:11, fontWeight:700, cursor:"pointer",
+                      border: active ? `1px solid ${col}40` : `1px solid ${th.borderSubtle}`,
+                      background: active ? `${col}1a` : th.bgTag,
+                      color: active ? col : th.textFaint,
+                    }}>{tp}</button>
+                  );
+                })}
+              </div>
+
+              {/* Status + Family */}
+              <div style={{ display:"flex", gap:6, marginBottom:6 }}>
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+                  style={{ flex:1, background:th.bgInput, border:`1px solid ${th.borderInput}`,
+                    borderRadius:8, padding:"6px 8px", fontSize:11, color:th.textMuted,
+                    cursor:"pointer", fontFamily:"inherit" }}>
+                  {["All","todo","attempted","solved"].map((o,i) => (
+                    <option key={o} value={o}>{["All Status","To Do","Attempted","Solved"][i]}</option>
+                  ))}
+                </select>
+                <select value={filterFamily} onChange={e => setFilterFamily(e.target.value)}
+                  style={{ flex:1, background:th.bgInput, border:`1px solid ${th.borderInput}`,
+                    borderRadius:8, padding:"6px 8px", fontSize:11, color:th.textMuted,
+                    cursor:"pointer", fontFamily:"inherit" }}>
+                  {ALL_FAMILIES.map(f => (
+                    <option key={f} value={f}>{f === "All" ? "All Patterns" : f}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ fontSize:11, color:th.textXFaint, fontWeight:600 }}>
+                {filteredProblems.length} of {problems.length} problems
+                {(search || filterTopic!=="All" || filterStatus!=="All" || filterFamily!=="All") && (
+                  <button onClick={resetFilters} style={{ marginLeft:8, color:a.blue,
+                    background:"none", border:"none", cursor:"pointer", fontSize:11, fontWeight:700 }}>Reset</button>
+                )}
+              </div>
+            </div>
+
+            {/* Problem list */}
+            <div style={{ flex:1, overflowY:"auto", padding:"6px 8px 80px" }}>
+              {filteredProblems.map((p, idx) => {
+                const isSelected = selectedId === p.number;
+                const tc = { Array:a.blue, String:a.violet, Grid:a.green }[p.topic] || a.blue;
+                const fc = getFamilyColor(p.family, a);
                 return (
-                  <button key={t} onClick={() => setFilterTopic(t)} className="btn-status" style={{
-                    flex: 1, padding: "6px 4px", borderRadius: 8, fontSize: 11, fontWeight: 700,
-                    border: active ? `1px solid ${meta?.color || "#38bdf8"}40` : `1px solid ${tokens.border}`,
-                    background: active ? (meta ? `${meta.color}15` : tokens.tagBg) : tokens.tagBg,
-                    color: active ? (meta?.color || "#38bdf8") : tokens.textMuted,
-                    cursor: "pointer"
-                  }}>{t}</button>
+                  <button key={p.number} className="prob-item btn-base" onClick={() => { setSelectedId(p.number); setSidebarOpen(false); }}
+                    style={{ width:"100%", textAlign:"left", padding:"10px 12px", borderRadius:12, marginBottom:3,
+                      background: isSelected ? `${tc}14` : "transparent",
+                      border: isSelected ? `1px solid ${tc}30` : `1px solid transparent`,
+                      position:"relative", display:"block",
+                      animation:`fadeIn 0.18s ${Math.min(idx*0.012,0.3)}s both` }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                        <span style={{ fontSize:10, fontWeight:700, color:th.textXFaint, fontFamily:"Space Mono" }}>
+                          #{String(p.number).padStart(3,"0")}
+                        </span>
+                        <StatusDot status={p.userState.status} />
+                      </div>
+                      <span style={{ fontSize:10, fontWeight:700, color:tc, background:`${tc}18`, borderRadius:999, padding:"1px 7px" }}>
+                        {p.topic}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:13, fontWeight:600, lineHeight:1.3, marginBottom:3,
+                      color: isSelected ? th.textPrimary : th.textMuted }}>
+                      {p.title}
+                    </div>
+                    <div style={{ fontSize:10, fontWeight:600, color:fc, opacity:0.85 }}>{p.family}</div>
+                    {isSelected && (
+                      <div style={{ position:"absolute", left:0, top:"18%", bottom:"18%", width:3,
+                        background:tc, borderRadius:"0 3px 3px 0", boxShadow:`0 0 10px ${tc}90` }} />
+                    )}
+                  </button>
                 );
               })}
-            </div>
-
-            {/* Status + Family filters */}
-            <div style={{ display: "flex", gap: 6 }}>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{
-                flex: 1, background: tokens.inputBg, border: `1px solid ${tokens.border}`,
-                borderRadius: 8, padding: "6px 10px", fontSize: 11, color: tokens.textMuted, cursor: "pointer"
-              }}>
-                <option value="All">All Status</option>
-                <option value="todo">To Do</option>
-                <option value="attempted">Attempted</option>
-                <option value="solved">Solved</option>
-              </select>
-              <select value={filterFamily} onChange={e => setFilterFamily(e.target.value)} style={{
-                flex: 1, background: tokens.inputBg, border: `1px solid ${tokens.border}`,
-                borderRadius: 8, padding: "6px 10px", fontSize: 11, color: tokens.textMuted, cursor: "pointer"
-              }}>
-                {allFamilies.map(f => <option key={f} value={f} style={{ background: tokens.bg, color: tokens.textMain }}>{f === "All" ? "All Patterns" : f}</option>)}
-              </select>
-            </div>
-
-            {/* Count */}
-            <div style={{ marginTop: 8, fontSize: 11, color: tokens.textDim, fontWeight: 600 }}>
-              {filteredProblems.length} of {problems.length} problems
-              {(search || filterTopic !== "All" || filterStatus !== "All" || filterFamily !== "All") && (
-                <button onClick={() => { setSearch(""); setFilterTopic("All"); setFilterStatus("All"); setFilterFamily("All"); }}
-                  style={{ marginLeft: 8, color: "#38bdf8", background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 700 }}>
-                  Reset
-                </button>
+              {filteredProblems.length === 0 && (
+                <div style={{ textAlign:"center", padding:"48px 16px" }}>
+                  <div style={{ fontSize:32, marginBottom:10 }}>🔍</div>
+                  <div style={{ color:th.textFaint, fontSize:14, marginBottom:8 }}>No problems found</div>
+                  <button onClick={resetFilters} style={{ color:a.blue, background:"none", border:"none", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                    Reset filters
+                  </button>
+                </div>
               )}
             </div>
-          </div>
+          </aside>
 
-          {/* Problem List */}
-          <div ref={listRef} style={{ flex: 1, overflowY: "auto", padding: "4px 10px 16px" }}>
-            {filteredProblems.map((p, idx) => {
-              const isSelected = selectedId === p.number;
-              const meta = TOPIC_META[p.topic] || TOPIC_META.Array;
-              const fc = FAMILY_COLORS[p.family] || "#64748b";
-              return (
-                <button key={p.number} className="problem-item" onClick={() => { setSelectedId(p.number); setSidebarOpen(false); }} style={{
-                  width: "100%", textAlign: "left", padding: "10px 12px", borderRadius: 12, marginBottom: 3,
-                  background: isSelected ? `${meta.color}12` : "rgba(255,255,255,0)",
-                  border: isSelected ? `1px solid ${meta.color}30` : "1px solid transparent",
-                  cursor: "pointer", position: "relative", display: "block",
-                  animation: `fadeIn 0.2s ${Math.min(idx * 0.015, 0.4)}s both`
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#334155", fontFamily: "Space Mono" }}>
-                        #{String(p.number).padStart(3, "0")}
-                      </span>
-                      <StatusDot status={p.userState.status} />
-                    </div>
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, color: meta.color,
-                      background: `${meta.color}15`, borderRadius: 999, padding: "1px 7px"
-                    }}>{p.topic}</span>
-                  </div>
-                  <div style={{
-                    fontSize: 13, fontWeight: 600, color: isSelected ? tokens.textHeading : tokens.textMuted,
-                    lineHeight: 1.3, marginBottom: 4
-                  }}>{p.title}</div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: fc, opacity: 0.8 }}>{p.family}</div>
-                  {isSelected && <div style={{
-                    position: "absolute", left: 0, top: "20%", bottom: "20%", width: 3,
-                    background: meta.color, borderRadius: "0 3px 3px 0",
-                    boxShadow: `0 0 10px ${meta.glow}`
-                  }} />}
-                </button>
-              );
-            })}
-            {filteredProblems.length === 0 && (
-              <div style={{ textAlign: "center", padding: "48px 16px" }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
-                <div style={{ color: "#475569", fontSize: 14, marginBottom: 8 }}>No problems found</div>
-                <button onClick={() => { setSearch(""); setFilterTopic("All"); setFilterStatus("All"); setFilterFamily("All"); }}
-                  style={{ color: "#38bdf8", background: "none", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
-                  Reset all filters
-                </button>
-              </div>
-            )}
-          </div>
-        </aside>
+          {/* ── MAIN CONTENT ── */}
+          <main style={{ flex:1, overflowY:"auto", position:"relative" }}>
+            {activeTab === "stats"
+              ? <StatsPanel stats={stats} problems={problems} />
+              : <DetailPanel
+                  problem={selectedProblem}
+                  filteredProblems={filteredProblems}
+                  expanded={expanded}
+                  toggleExpanded={toggleExpanded}
+                  updateStatus={updateStatus}
+                  updateRemarks={updateRemarks}
+                  navigate={navigate}
+                />
+            }
+          </main>
+        </div>
 
-        {/* ── MAIN CONTENT ── */}
-        <main style={{ flex: 1, overflowY: "auto", position: "relative" }}>
-          {activeTab === "stats" ? (
-            <StatsPanel stats={stats} problems={problems} tokens={tokens} />
-          ) : (
-            <DetailPanel
-              problem={selectedProblem}
-              filteredProblems={filteredProblems}
-              topicMeta={topicMeta}
-              familyColor={familyColor}
-              expandedSections={expandedSections}
-              toggleSection={toggleSection}
-              updateStatus={updateStatus}
-              updateRemarks={updateRemarks}
-              navigateProblem={navigateProblem}
-              tokens={tokens}
-            />
-          )}
-        </main>
+        {/* ── MOBILE BOTTOM NAV ── */}
+        <div className="show-mobile" style={{
+          display:"none", position:"fixed", bottom:0, left:0, right:0, zIndex:100,
+          background:th.bgHeader, backdropFilter:"blur(20px)",
+          borderTop:`1px solid ${th.borderSubtle}`, padding:"8px 12px 14px", gap:8,
+        }}>
+          {[
+            { label:"☰ List",   tab:null,     act:() => setSidebarOpen(true) },
+            { label:"📖 Study", tab:"detail", act:() => { setActiveTab("detail"); setSidebarOpen(false); } },
+            { label:"📊 Stats", tab:"stats",  act:() => { setActiveTab("stats");  setSidebarOpen(false); } },
+          ].map(btn => {
+            const isActive = btn.tab && activeTab === btn.tab;
+            return (
+              <button key={btn.label} onClick={btn.act} style={{
+                flex:1, padding:"9px 4px", borderRadius:12, fontSize:12, fontWeight:700, cursor:"pointer",
+                background: isActive ? `${a.blue}18` : th.bgCard,
+                border: isActive ? `1px solid ${a.blue}35` : `1px solid ${th.borderSubtle}`,
+                color: isActive ? a.blue : th.textMuted, fontFamily:"inherit",
+              }}>{btn.label}</button>
+            );
+          })}
+        </div>
       </div>
-
-      {/* Mobile bottom nav */}
-      <div style={{
-        display: "none", position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
-        background: tokens.headerBg, backdropFilter: "blur(20px)",
-        borderTop: `1px solid ${tokens.border}`,
-        padding: "8px 20px 12px", gap: 8
-      }} className="mobile-bottom-nav">
-        <style>{`@media(max-width:768px){.mobile-bottom-nav{display:flex!important;}}`}</style>
-        <button onClick={() => setSidebarOpen(true)} style={{
-          flex: 1, padding: "10px", background: tokens.tagBg, border: "none",
-          borderRadius: 12, color: tokens.textMuted, cursor: "pointer", fontSize: 12, fontWeight: 700
-        }}>☰ Problems</button>
-        <button onClick={() => setActiveTab("detail")} style={{
-          flex: 1, padding: "10px",
-          background: activeTab === "detail" ? "rgba(56,189,248,0.15)" : tokens.tagBg,
-          border: activeTab === "detail" ? "1px solid rgba(56,189,248,0.3)" : "none",
-          borderRadius: 12, color: activeTab === "detail" ? "#38bdf8" : tokens.textMuted, cursor: "pointer", fontSize: 12, fontWeight: 700
-        }}>📖 Study</button>
-        <button onClick={() => setActiveTab("stats")} style={{
-          flex: 1, padding: "10px",
-          background: activeTab === "stats" ? "rgba(56,189,248,0.15)" : tokens.tagBg,
-          border: activeTab === "stats" ? "1px solid rgba(56,189,248,0.3)" : "none",
-          borderRadius: 12, color: activeTab === "stats" ? "#38bdf8" : tokens.textMuted, cursor: "pointer", fontSize: 12, fontWeight: 700
-        }}>📊 Stats</button>
-      </div>
-    </div>
+    </ThemeCtx.Provider>
   );
 }
 
 // ============================================================
 // DETAIL PANEL
 // ============================================================
-
-function DetailPanel({ problem, filteredProblems, topicMeta, familyColor, expandedSections, toggleSection, updateStatus, updateRemarks, navigateProblem, tokens }) {
-  const idx = filteredProblems.findIndex(p => p.number === problem.number);
+function DetailPanel({ problem, filteredProblems, expanded, toggleExpanded, updateStatus, updateRemarks, navigate }) {
+  const { mode, th, a } = useTheme();
+  const topicMeta   = getTopicMeta(problem.topic, a);
+  const familyColor = getFamilyColor(problem.family, a);
+  const idx    = filteredProblems.findIndex(p => p.number === problem.number);
   const hasPrev = idx > 0;
   const hasNext = idx < filteredProblems.length - 1;
 
-  const statusConfig = [
-    { id: "todo", label: "To Do", color: "#64748b", bg: "rgba(100,116,139,0.15)" },
-    { id: "attempted", label: "Attempted", color: "#fbbf24", bg: "rgba(251,191,36,0.15)" },
-    { id: "solved", label: "Solved ✓", color: "#34d399", bg: "rgba(52,211,153,0.15)" },
+  const statuses = [
+    { id:"todo",      label:"To Do",     color:th.textFaint, activeBg:th.bgTag,          activeBorder:th.borderSubtle },
+    { id:"attempted", label:"Attempted", color:a.amber,      activeBg:`${a.amber}1c`,    activeBorder:`${a.amber}50` },
+    { id:"solved",    label:"Solved ✓",  color:a.green,      activeBg:`${a.green}1c`,    activeBorder:`${a.green}50` },
   ];
 
-  const SectionCard = ({ id, icon, title, iconBg, iconColor, accent, children }) => {
-    const isOpen = expandedSections[id];
+  const NavBtn = ({ dir, label, enabled }) => (
+    <button onClick={() => navigate(dir)} disabled={!enabled} className="btn-hover"
+      style={{ flex:1, padding:"12px", borderRadius:14, fontSize:13, fontWeight:700, cursor:enabled?"pointer":"not-allowed",
+        background: enabled&&dir>0 ? `${a.blue}14` : th.bgCard,
+        border: enabled&&dir>0 ? `1px solid ${a.blue}30` : `1px solid ${th.borderSubtle}`,
+        color: enabled ? (dir>0 ? a.blue : th.textMuted) : th.textXFaint,
+        boxShadow:th.shadowCard, fontFamily:"inherit" }}>{label}</button>
+  );
+
+  const SectionCard = ({ id, icon, title, accent, children }) => {
+    const isOpen = expanded[id];
+    const iconBgs = { problem:`${a.blue}1c`, pattern:`${a.violet}1c`, trigger:`${a.amber}1c`, solution:`${a.green}1c`, remarks:`${th.textFaint}20` };
     return (
-      <div style={{
-        background: tokens.cardBg, border: `1px solid ${tokens.border}`,
-        borderRadius: 20, overflow: "hidden",
-        animation: "fadeSlideIn 0.4s ease both"
-      }}>
-        <button onClick={() => toggleSection(id)} style={{
-          width: "100%", display: "flex", alignItems: "center", gap: 12,
-          padding: "18px 22px", background: "none", border: "none", cursor: "pointer", textAlign: "left"
-        }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            background: iconBg, display: "flex", alignItems: "center", justifyContent: "center"
-          }}>
-            <span style={{ color: iconColor, fontSize: 16 }}>{icon}</span>
-          </div>
-          <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: tokens.textHeading }}>{title}</span>
-          <span style={{ color: tokens.textDim, fontSize: 14, transition: "transform 0.2s", transform: isOpen ? "rotate(0)" : "rotate(-90deg)" }}>▾</span>
+      <div style={{ background:th.bgCard, border:`1px solid ${th.borderSubtle}`, borderRadius:20,
+        overflow:"hidden", boxShadow:th.shadowCard, animation:"fadeSlideIn 0.32s ease both" }}>
+        <button className="btn-base" onClick={() => toggleExpanded(id)}
+          style={{ width:"100%", display:"flex", alignItems:"center", gap:12,
+            padding:"15px 20px", textAlign:"left", cursor:"pointer" }}>
+          <div style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:iconBgs[id]||th.bgTag,
+            display:"flex", alignItems:"center", justifyContent:"center", fontSize:17 }}>{icon}</div>
+          <span style={{ flex:1, fontSize:15, fontWeight:700, color:th.textPrimary }}>{title}</span>
+          <span style={{ color:th.textFaint, fontSize:14, display:"inline-block",
+            transition:"transform 0.2s", transform:isOpen?"rotate(0)":"rotate(-90deg)" }}>▾</span>
         </button>
-        <div className={`section-content ${isOpen ? "expanded" : "collapsed"}`} style={{ maxHeight: isOpen ? 2000 : 0 }}>
-          <div style={{ padding: "0 22px 22px" }}>
-            {accent && <div style={{ height: 1, background: `linear-gradient(90deg, ${accent}40, transparent)`, marginBottom: 18 }} />}
+        <div className={`section-content ${isOpen?"open":"closed"}`} style={{ maxHeight:isOpen?2000:0 }}>
+          <div style={{ padding:"0 20px 20px" }}>
+            {accent && <div style={{ height:1, background:`linear-gradient(90deg,${accent}55,transparent)`, marginBottom:16 }} />}
             {children}
           </div>
         </div>
@@ -802,151 +788,125 @@ function DetailPanel({ problem, filteredProblems, topicMeta, familyColor, expand
   };
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto", padding: "24px 20px 120px" }}>
-      {/* Navigation */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: tokens.textDim, marginBottom: 24, justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div style={{ maxWidth:860, margin:"0 auto", padding:"24px 18px 130px" }}>
+      {/* Breadcrumb + nav */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:8 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, fontWeight:700,
+          textTransform:"uppercase", letterSpacing:"0.1em", color:th.textXFaint }}>
           <span>Handbook</span>
-          <span style={{ color: tokens.borderStrong }}>/</span>
-          <span style={{ color: topicMeta.color }}>{problem.topic}</span>
-          <span style={{ color: tokens.borderStrong }}>/</span>
-          <span style={{ color: familyColor }}>{problem.family}</span>
+          <span style={{ color:th.borderSubtle }}>/</span>
+          <span style={{ color:topicMeta.color }}>{problem.topic}</span>
+          <span style={{ color:th.borderSubtle }}>/</span>
+          <span style={{ color:familyColor, maxWidth:180, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{problem.family}</span>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => navigateProblem(-1)} disabled={!hasPrev} style={{
-            background: tokens.tagBg, border: `1px solid ${tokens.border}`,
-            borderRadius: 8, padding: "6px 14px", color: hasPrev ? tokens.textMuted : tokens.textDim,
-            cursor: hasPrev ? "pointer" : "not-allowed", fontSize: 13, fontWeight: 700,
-            transition: "all 0.15s"
-          }}>← Prev</button>
-          <button onClick={() => navigateProblem(1)} disabled={!hasNext} style={{
-            background: tokens.tagBg, border: `1px solid ${tokens.border}`,
-            borderRadius: 8, padding: "6px 14px", color: hasNext ? tokens.textMuted : tokens.textDim,
-            cursor: hasNext ? "pointer" : "not-allowed", fontSize: 13, fontWeight: 700,
-            transition: "all 0.15s"
-          }}>Next →</button>
+        <div style={{ display:"flex", gap:6 }}>
+          <NavBtn dir={-1} label="← Prev" enabled={hasPrev} />
+          <NavBtn dir={1}  label="Next →" enabled={hasNext} />
         </div>
       </div>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <div style={{
-        background: `linear-gradient(135deg, ${topicMeta.color}08, rgba(99,102,241,0.05))`,
-        border: `1px solid ${topicMeta.color}20`,
-        borderRadius: 24, padding: "28px 32px", marginBottom: 20,
-        animation: "fadeSlideIn 0.3s ease both"
+        background: mode==="light"
+          ? `linear-gradient(135deg,${topicMeta.color}0d,rgba(99,102,241,0.04))`
+          : `linear-gradient(135deg,${topicMeta.color}0e,rgba(99,102,241,0.06))`,
+        border:`1px solid ${topicMeta.color}2c`, borderRadius:24, padding:"22px 26px", marginBottom:14,
+        boxShadow:`0 4px 32px ${topicMeta.color}14, ${th.shadowCard}`,
+        animation:"fadeSlideIn 0.3s ease both"
       }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <span style={{
-                fontFamily: "Space Mono", fontSize: 13, fontWeight: 700, color: topicMeta.color,
-                background: `${topicMeta.color}15`, borderRadius: 8, padding: "3px 10px"
-              }}>#{String(problem.number).padStart(3, "0")}</span>
+        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:20, flexWrap:"wrap" }}>
+          <div style={{ flex:1, minWidth:200 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+              <span style={{ fontFamily:"Space Mono", fontSize:12, fontWeight:700, color:topicMeta.color,
+                background:`${topicMeta.color}1c`, borderRadius:8, padding:"2px 10px" }}>
+                #{String(problem.number).padStart(3,"0")}
+              </span>
               <StatusDot status={problem.userState.status} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: tokens.textDim, textTransform: "capitalize" }}>{problem.userState.status}</span>
+              <span style={{ fontSize:11, fontWeight:700, color:th.textFaint, textTransform:"capitalize" }}>
+                {problem.userState.status}
+              </span>
             </div>
-            <h2 style={{
-              fontFamily: "Outfit", fontSize: "clamp(22px, 4vw, 34px)", fontWeight: 900,
-              color: tokens.textHeading, letterSpacing: "-0.03em", margin: 0, marginBottom: 14,
-              lineHeight: 1.15
-            }}>{problem.title}</h2>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <h2 style={{ fontFamily:"Outfit", fontSize:"clamp(22px,4vw,32px)", fontWeight:900,
+              color:th.textPrimary, letterSpacing:"-0.03em", margin:"0 0 14px", lineHeight:1.15 }}>
+              {problem.title}
+            </h2>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
               <Pill color={topicMeta.color}>{problem.topic}</Pill>
               <Pill color={familyColor}>{problem.family}</Pill>
             </div>
           </div>
-
-          {/* Complexity chips */}
-          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-            <ComplexityChip label="Time" value={problem.complexity.time} color="#38bdf8" tokens={tokens} />
-            <ComplexityChip label="Space" value={problem.complexity.space} color="#a78bfa" tokens={tokens} />
+          <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+            <ComplexityChip label="Time"  value={problem.complexity.time}  color={a.blue}   />
+            <ComplexityChip label="Space" value={problem.complexity.space} color={a.violet} />
           </div>
         </div>
 
         {/* Status toggle */}
-        <div style={{
-          marginTop: 22, paddingTop: 18, borderTop: `1px solid ${tokens.border}`,
-          display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap"
-        }}>
-          <span style={{ fontSize: 12, color: tokens.textDim, fontWeight: 700, marginRight: 4 }}>Mark as:</span>
-          {statusConfig.map(s => {
-            const isActive = problem.userState.status === s.id;
+        <div style={{ marginTop:18, paddingTop:14, borderTop:`1px solid ${th.borderSubtle}`,
+          display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+          <span style={{ fontSize:12, color:th.textFaint, fontWeight:700, marginRight:4 }}>Mark as:</span>
+          {statuses.map(s => {
+            const active = problem.userState.status === s.id;
             return (
-              <button key={s.id} className="btn-status" onClick={() => updateStatus(problem.number, s.id)} style={{
-                padding: "7px 18px", borderRadius: 10, fontSize: 12, fontWeight: 700,
-                background: isActive ? s.bg : tokens.tagBg,
-                border: isActive ? `1px solid ${s.color}50` : `1px solid ${tokens.border}`,
-                color: isActive ? s.color : tokens.textDim, cursor: "pointer"
-              }}>{s.label}</button>
+              <button key={s.id} className="btn-hover" onClick={() => updateStatus(problem.number, s.id)}
+                style={{ padding:"7px 18px", borderRadius:10, fontSize:12, fontWeight:700, cursor:"pointer",
+                  fontFamily:"inherit",
+                  background: active ? s.activeBg : th.bgCard,
+                  border: active ? `1px solid ${s.activeBorder}` : `1px solid ${th.borderSubtle}`,
+                  color: active ? s.color : th.textFaint,
+                  boxShadow: active ? `0 0 12px ${s.color}28` : "none" }}>
+                {s.label}
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* Content Sections */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <SectionCard id="problem" icon="🎯" title="Problem Statement" iconBg="rgba(56,189,248,0.12)" iconColor="#38bdf8" accent="#38bdf8">
-          <RichText text={problem.problem_statement} tokens={tokens} />
+      {/* Sections */}
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        <SectionCard id="problem"  icon="🎯" title="Problem Statement" accent={a.blue}>
+          <RichText text={problem.problem_statement} />
         </SectionCard>
 
-        <SectionCard id="pattern" icon="💡" title="The Pattern" iconBg="rgba(167,139,250,0.12)" iconColor="#a78bfa" accent="#a78bfa">
-          <RichText text={problem.pattern_explanation} tokens={tokens} />
+        <SectionCard id="pattern"  icon="💡" title="The Pattern"        accent={a.violet}>
+          <RichText text={problem.pattern_explanation} />
         </SectionCard>
 
-        <SectionCard id="trigger" icon="⚡" title="Pattern Trigger" iconBg="rgba(251,191,36,0.12)" iconColor="#fbbf24" accent="#fbbf24">
-          <div style={{
-            background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.15)",
-            borderRadius: 12, padding: "16px 20px",
-            borderLeft: "3px solid #fbbf24"
-          }}>
-            <p style={{ fontStyle: "italic", color: "#fde68a", lineHeight: 1.7, fontSize: 14, margin: 0 }}>
+        <SectionCard id="trigger"  icon="⚡" title="Pattern Trigger"    accent={a.amber}>
+          <div style={{ background:th.bgTrigger, border:`1px solid ${th.borderTrigger}`,
+            borderLeft:`3px solid ${a.amber}`, borderRadius:12, padding:"14px 18px" }}>
+            <p style={{ fontStyle:"italic", color:th.textTrigger, lineHeight:1.72, fontSize:14, margin:0 }}>
               "{problem.trigger_phrase}"
             </p>
           </div>
         </SectionCard>
 
-        <SectionCard id="solution" icon="✅" title="Strategy & Solution" iconBg="rgba(52,211,153,0.12)" iconColor="#34d399" accent="#34d399">
-          <RichText text={problem.detailed_solution} tokens={tokens} />
+        <SectionCard id="solution" icon="✅" title="Strategy & Solution" accent={a.green}>
+          <RichText text={problem.detailed_solution} />
         </SectionCard>
 
-        <SectionCard id="remarks" icon="📝" title="My Notes" iconBg="rgba(100,116,139,0.12)" iconColor="#94a3b8">
+        <SectionCard id="remarks"  icon="📝" title="My Notes">
           <textarea
             value={problem.userState.remarks || ""}
             onChange={e => updateRemarks(problem.number, e.target.value)}
-            placeholder="Add your own notes, edge cases, code hints, or mnemonics here..."
-            style={{
-              width: "100%", minHeight: 140, padding: "14px 16px",
-              background: tokens.inputBg, border: `1px solid ${tokens.border}`,
-              borderRadius: 12, fontSize: 13, color: tokens.textMain, resize: "vertical",
-              fontFamily: "inherit", lineHeight: 1.6,
-              transition: "border-color 0.2s"
-            }}
-            onFocus={e => e.target.style.borderColor = "rgba(56,189,248,0.3)"}
-            onBlur={e => e.target.style.borderColor = tokens.border}
+            placeholder="Add your own notes, edge cases, hints, or mnemonics here…"
+            style={{ width:"100%", minHeight:130, padding:"12px 14px",
+              background:th.bgInput, border:`1px solid ${th.borderInput}`,
+              borderRadius:12, fontSize:13, color:th.textPrimary, resize:"vertical",
+              fontFamily:"inherit", lineHeight:1.65, transition:"border-color 0.2s" }}
+            onFocus={e => e.target.style.borderColor = th.borderFocus}
+            onBlur={e  => e.target.style.borderColor = th.borderInput}
           />
-          <div style={{ fontSize: 10, color: tokens.textDim, marginTop: 8, fontWeight: 600 }}>
-            Auto-saved to cross-device storage
+          <div style={{ fontSize:10, color:th.textXFaint, marginTop:6, fontWeight:600 }}>
+            Auto-saved · cross-device storage
           </div>
         </SectionCard>
       </div>
 
-      {/* Bottom navigation */}
-      <div style={{
-        display: "flex", justifyContent: "space-between", marginTop: 32, gap: 12
-      }}>
-        <button onClick={() => navigateProblem(-1)} disabled={!hasPrev} style={{
-          flex: 1, padding: "14px", background: hasPrev ? tokens.tagBg : "transparent",
-          border: `1px solid ${tokens.border}`, borderRadius: 14,
-          color: hasPrev ? tokens.textMuted : tokens.textDim, cursor: hasPrev ? "pointer" : "not-allowed",
-          fontSize: 13, fontWeight: 700, transition: "all 0.2s"
-        }}>← Previous Problem</button>
-        <button onClick={() => navigateProblem(1)} disabled={!hasNext} style={{
-          flex: 1, padding: "14px", background: hasNext ? "rgba(56,189,248,0.08)" : "transparent",
-          border: hasNext ? "1px solid rgba(56,189,248,0.2)" : `1px solid ${tokens.border}`,
-          borderRadius: 14, color: hasNext ? "#38bdf8" : tokens.textDim,
-          cursor: hasNext ? "pointer" : "not-allowed", fontSize: 13, fontWeight: 700,
-          transition: "all 0.2s"
-        }}>Next Problem →</button>
+      {/* Bottom nav */}
+      <div style={{ display:"flex", gap:10, marginTop:28 }}>
+        <NavBtn dir={-1} label="← Previous Problem" enabled={hasPrev} />
+        <NavBtn dir={1}  label="Next Problem →"      enabled={hasNext} />
       </div>
     </div>
   );
@@ -955,149 +915,144 @@ function DetailPanel({ problem, filteredProblems, topicMeta, familyColor, expand
 // ============================================================
 // STATS PANEL
 // ============================================================
+function StatsPanel({ stats, problems }) {
+  const { th, a } = useTheme();
+  const topicColors = { Array:a.blue, String:a.violet, Grid:a.green };
+  const solvedProblems = problems.filter(p => p.userState.status === "solved");
 
-function StatsPanel({ stats, problems, tokens }) {
-  const recentlySolved = problems
-    .filter(p => p.userState.status === "solved")
-    .slice(0, 6);
+  const Card = ({ children, style={} }) => (
+    <div className="card-lift" style={{ background:th.bgCard, border:`1px solid ${th.borderSubtle}`,
+      borderRadius:18, boxShadow:th.shadowCard, ...style }}>
+      {children}
+    </div>
+  );
 
   return (
-    <div style={{ maxWidth: 860, margin: "0 auto", padding: "24px 20px 120px" }}>
-      <h2 style={{ fontFamily: "Outfit", fontSize: 28, fontWeight: 900, color: tokens.textHeading, marginBottom: 6, letterSpacing: "-0.03em" }}>
-        Progress Dashboard
-      </h2>
-      <p style={{ color: tokens.textMuted, fontSize: 14, marginBottom: 28 }}>
-        Track your DSA mastery across all 100 problems
+    <div style={{ maxWidth:860, margin:"0 auto", padding:"24px 18px 130px" }}>
+      <h2 style={{ fontFamily:"Outfit", fontSize:28, fontWeight:900, color:th.textPrimary,
+        marginBottom:4, letterSpacing:"-0.03em" }}>Progress Dashboard</h2>
+      <p style={{ color:th.textFaint, fontSize:14, marginBottom:24 }}>
+        Your DSA mastery across all {stats.total} problems
       </p>
 
-      {/* Overview cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 24 }}>
+      {/* 4 stat cards */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))", gap:12, marginBottom:14 }}>
         {[
-          { label: "Solved", val: stats.solved, color: "#34d399", icon: "✓", total: stats.total },
-          { label: "Attempted", val: stats.attempted, color: "#fbbf24", icon: "◐", total: stats.total },
-          { label: "Remaining", val: stats.todo, color: "#64748b", icon: "○", total: stats.total },
-          { label: "Completion", val: `${stats.pct}%`, color: "#38bdf8", icon: "◎", total: null },
+          { label:"Solved",    val:stats.solved,    color:a.green,       icon:"✓", bar:true },
+          { label:"Attempted", val:stats.attempted, color:a.amber,       icon:"◐", bar:true },
+          { label:"Remaining", val:stats.todo,      color:th.textFaint,  icon:"○", bar:true },
+          { label:"Done",      val:`${stats.pct}%`, color:a.blue,        icon:"◎", bar:false },
         ].map(c => (
-          <div key={c.label} className="card-hover" style={{
-            background: tokens.cardBg, border: `1px solid ${tokens.border}`,
-            borderRadius: 18, padding: "20px 18px", textAlign: "center"
-          }}>
-            <div style={{ fontSize: 22, marginBottom: 8 }}>{c.icon}</div>
-            <div style={{ fontFamily: "Space Mono", fontSize: 28, fontWeight: 700, color: c.color, lineHeight: 1 }}>{c.val}</div>
-            {c.total && <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 99, margin: "10px 0 6px", overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${(c.val / c.total) * 100}%`, background: c.color, borderRadius: 99, transition: "width 1s" }} />
-            </div>}
-            <div style={{ fontSize: 11, color: tokens.textMuted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginTop: c.total ? 0 : 10 }}>{c.label}</div>
-          </div>
+          <Card key={c.label} style={{ padding:"18px 14px", textAlign:"center" }}>
+            <div style={{ fontSize:20, marginBottom:6 }}>{c.icon}</div>
+            <div style={{ fontFamily:"Space Mono", fontSize:26, fontWeight:700, color:c.color, lineHeight:1 }}>{c.val}</div>
+            {c.bar && (
+              <div style={{ height:3, background:th.barTrack, borderRadius:99, margin:"10px 0 5px", overflow:"hidden" }}>
+                <div style={{ height:"100%", width:`${(Number(c.val)/stats.total)*100}%`, background:c.color, borderRadius:99, transition:"width 1s" }} />
+              </div>
+            )}
+            <div style={{ fontSize:11, color:th.textXFaint, fontWeight:700, textTransform:"uppercase",
+              letterSpacing:"0.08em", marginTop:c.bar?0:10 }}>{c.label}</div>
+          </Card>
         ))}
       </div>
 
-      {/* Big ring */}
-      <div style={{
-        background: tokens.cardBg, border: `1px solid ${tokens.border}`,
-        borderRadius: 24, padding: "32px", marginBottom: 20,
-        display: "flex", alignItems: "center", gap: 32, flexWrap: "wrap"
-      }}>
-        <CircleProgress pct={stats.pct} size={120} stroke={8} color="#38bdf8" tokens={tokens}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontFamily: "Space Mono", fontSize: 22, fontWeight: 700, color: "#38bdf8" }}>{stats.pct}%</div>
-            <div style={{ fontSize: 9, color: tokens.textDim, fontWeight: 700 }}>DONE</div>
+      {/* Ring + motivational */}
+      <Card style={{ padding:"26px 28px", marginBottom:14, display:"flex", alignItems:"center", gap:28, flexWrap:"wrap" }}>
+        <CircleProgress pct={stats.pct} size={110} stroke={8} color={a.blue}>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontFamily:"Space Mono", fontSize:20, fontWeight:700, color:a.blue }}>{stats.pct}%</div>
+            <div style={{ fontSize:9, color:th.textFaint, fontWeight:700 }}>DONE</div>
           </div>
         </CircleProgress>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ fontFamily: "Outfit", fontSize: 20, fontWeight: 800, color: tokens.textHeading, marginBottom: 8 }}>
-            {stats.pct >= 80 ? "🔥 Almost there!" : stats.pct >= 50 ? "⚡ Great momentum!" : stats.pct >= 20 ? "🚀 Keep going!" : "🌱 Just getting started"}
+        <div style={{ flex:1, minWidth:180 }}>
+          <div style={{ fontFamily:"Outfit", fontSize:19, fontWeight:800, color:th.textPrimary, marginBottom:6 }}>
+            {stats.pct>=80?"🔥 Almost there!":stats.pct>=50?"⚡ Great momentum!":stats.pct>=20?"🚀 Keep going!":"🌱 Just getting started"}
           </div>
-          <p style={{ color: tokens.textMuted, fontSize: 14, lineHeight: 1.6 }}>
-            You've solved <strong style={{ color: "#34d399" }}>{stats.solved}</strong> problems and attempted <strong style={{ color: "#fbbf24" }}>{stats.attempted}</strong> more. 
-            {stats.todo > 0 ? ` ${stats.todo} problems still waiting.` : " All problems done! 🎉"}
+          <p style={{ color:th.textFaint, fontSize:14, lineHeight:1.65, margin:"0 0 14px" }}>
+            Solved <strong style={{ color:a.green }}>{stats.solved}</strong> problems,
+            attempted <strong style={{ color:a.amber }}>{stats.attempted}</strong> more.
+            {stats.todo>0 ? ` ${stats.todo} still waiting.` : " All done! 🎉"}
           </p>
-          {/* Mini bar */}
-          <div style={{ height: 8, background: "rgba(255,255,255,0.05)", borderRadius: 99, marginTop: 16, overflow: "hidden", display: "flex" }}>
-            <div style={{ height: "100%", width: `${(stats.solved/stats.total)*100}%`, background: "#34d399", transition: "width 1s" }} />
-            <div style={{ height: "100%", width: `${(stats.attempted/stats.total)*100}%`, background: "#fbbf24", transition: "width 1s" }} />
+          <div style={{ height:8, background:th.barTrack, borderRadius:99, overflow:"hidden", display:"flex" }}>
+            <div style={{ width:`${(stats.solved/stats.total)*100}%`, background:a.green, transition:"width 1s" }} />
+            <div style={{ width:`${(stats.attempted/stats.total)*100}%`, background:a.amber, transition:"width 1s" }} />
           </div>
-          <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 11 }}>
-            <span style={{ color: "#34d399" }}>■ Solved</span>
-            <span style={{ color: "#fbbf24" }}>■ Attempted</span>
-            <span style={{ color: "#334155" }}>■ Todo</span>
+          <div style={{ display:"flex", gap:14, marginTop:7, fontSize:11 }}>
+            <span style={{ color:a.green }}>■ Solved</span>
+            <span style={{ color:a.amber }}>■ Attempted</span>
+            <span style={{ color:th.textXFaint }}>■ Todo</span>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* By Topic */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginBottom: 20 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12, marginBottom:14 }}>
         {Object.entries(stats.byTopic).map(([topic, data]) => {
-          const meta = TOPIC_META[topic];
-          const pct = Math.round((data.solved / data.total) * 100);
+          const col = topicColors[topic] || a.blue;
+          const pct = Math.round((data.solved/data.total)*100);
           return (
-            <div key={topic} className="card-hover" style={{
-              background: tokens.cardBg, border: `1px solid ${meta.color}20`,
-              borderRadius: 18, padding: "20px"
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, color: meta.color, fontSize: 14 }}>{topic}</span>
-                <span style={{ fontFamily: "Space Mono", fontSize: 13, color: "#64748b" }}>{data.solved}/{data.total}</span>
+            <Card key={topic} style={{ padding:"16px 20px", border:`1px solid ${col}28` }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                <span style={{ fontWeight:700, color:col, fontSize:14 }}>{topic}</span>
+                <span style={{ fontFamily:"Space Mono", fontSize:12, color:th.textFaint }}>{data.solved}/{data.total}</span>
               </div>
-              <div style={{ height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 99, overflow: "hidden", marginBottom: 8 }}>
-                <div style={{ height: "100%", width: `${pct}%`, background: meta.color, borderRadius: 99, transition: "width 1s", boxShadow: `0 0 8px ${meta.glow}` }} />
+              <div style={{ height:6, background:th.barTrack, borderRadius:99, overflow:"hidden", marginBottom:7 }}>
+                <div style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:99,
+                  transition:"width 1s", boxShadow:`0 0 8px ${col}60` }} />
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: meta.color }}>{pct}% complete</div>
-            </div>
+              <div style={{ fontSize:12, fontWeight:700, color:col }}>{pct}% complete</div>
+            </Card>
           );
         })}
       </div>
 
-      {/* By Pattern Family */}
-      <div style={{
-        background: tokens.cardBg, border: `1px solid ${tokens.border}`,
-        borderRadius: 24, padding: "24px", marginBottom: 20
-      }}>
-        <h3 style={{ fontFamily: "Outfit", fontSize: 18, fontWeight: 800, color: tokens.textHeading, marginBottom: 18 }}>Progress by Pattern</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {Object.entries(stats.byFamily).sort((a, b) => b[1].solved - a[1].solved).map(([family, data]) => {
-            const pct = Math.round((data.solved / data.total) * 100);
-            const color = FAMILY_COLORS[family] || "#64748b";
+      {/* By Pattern */}
+      <Card style={{ padding:"22px 24px", marginBottom:14 }}>
+        <h3 style={{ fontFamily:"Outfit", fontSize:17, fontWeight:800, color:th.textPrimary, marginBottom:16 }}>
+          Progress by Pattern
+        </h3>
+        <div style={{ display:"flex", flexDirection:"column", gap:9 }}>
+          {Object.entries(stats.byFamily).sort((x,y) => y[1].solved - x[1].solved).map(([family, data]) => {
+            const pct = Math.round((data.solved/data.total)*100);
+            const col = getFamilyColor(family, a);
             return (
-              <div key={family} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 140, fontSize: 12, fontWeight: 600, color: "#64748b", textAlign: "right", flexShrink: 0 }}>{family}</div>
-                <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.04)", borderRadius: 99, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 99, transition: "width 1s" }} />
+              <div key={family} style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ width:155, fontSize:11, fontWeight:600, color:th.textFaint, textAlign:"right", flexShrink:0 }}>{family}</div>
+                <div style={{ flex:1, height:5, background:th.barTrack, borderRadius:99, overflow:"hidden" }}>
+                  <div style={{ height:"100%", width:`${pct}%`, background:col, borderRadius:99, transition:"width 1s" }} />
                 </div>
-                <div style={{ width: 50, fontSize: 11, fontWeight: 700, color, fontFamily: "Space Mono", flexShrink: 0, textAlign: "right" }}>
+                <div style={{ width:46, fontSize:10, fontWeight:700, color:col, fontFamily:"Space Mono", flexShrink:0, textAlign:"right" }}>
                   {data.solved}/{data.total}
                 </div>
               </div>
             );
           })}
         </div>
-      </div>
+      </Card>
 
-      {/* Recently solved */}
-      {recentlySolved.length > 0 && (
-        <div style={{
-          background: tokens.cardBg, border: `1px solid ${tokens.border}`,
-          borderRadius: 24, padding: "24px"
-        }}>
-          <h3 style={{ fontFamily: "Outfit", fontSize: 18, fontWeight: 800, color: tokens.textHeading, marginBottom: 16 }}>✅ Solved Problems</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
-            {recentlySolved.map(p => {
-              const meta = TOPIC_META[p.topic] || TOPIC_META.Array;
+      {/* Solved problems */}
+      {solvedProblems.length > 0 && (
+        <Card style={{ padding:"22px 24px" }}>
+          <h3 style={{ fontFamily:"Outfit", fontSize:17, fontWeight:800, color:th.textPrimary, marginBottom:14 }}>
+            ✅ Solved Problems ({solvedProblems.length})
+          </h3>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))", gap:10 }}>
+            {solvedProblems.map(p => {
+              const col = topicColors[p.topic] || a.blue;
               return (
-                <div key={p.number} style={{
-                  background: "rgba(52,211,153,0.05)", border: "1px solid rgba(52,211,153,0.15)",
-                  borderRadius: 12, padding: "12px 14px"
-                }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#34d399", fontFamily: "Space Mono", marginBottom: 4 }}>
+                <div key={p.number} style={{ background:th.bgSolvedCard, border:`1px solid ${th.borderSolved}`,
+                  borderRadius:12, padding:"11px 14px" }}>
+                  <div style={{ fontSize:10, fontWeight:700, color:a.green, fontFamily:"Space Mono", marginBottom:4 }}>
                     #{String(p.number).padStart(3,"0")}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: tokens.textHeading, lineHeight: 1.3 }}>{p.title}</div>
-                  <div style={{ fontSize: 10, color: meta.color, marginTop: 4 }}>{p.topic}</div>
+                  <div style={{ fontSize:13, fontWeight:600, color:th.textPrimary, lineHeight:1.3 }}>{p.title}</div>
+                  <div style={{ fontSize:10, color:col, marginTop:4 }}>{p.topic}</div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );
